@@ -3,6 +3,12 @@ from config import ID_OWNER
 from datetime import datetime
 
 
+class Note:
+    def __init__(self, time_range: str, student_id: str | int | None):
+        self.time_range = time_range
+        self.student_id = student_id
+
+
 def is_admin(admin_list, user_id: int | str) -> bool:
     admins = [str(user.user.id) for user in admin_list]
     return str(user_id) in admins
@@ -58,3 +64,20 @@ def add_notes(table_id: int, start_note_id: int, count: int, time_range: int, ho
         range_time += f"{'{:02}'.format(hours)}:{'{:02}'.format(minutes)}"
         base.Insert.note_into_notes(note_id, range_time)
         base.Insert.note_into_table(note_id, table_id)
+
+
+def get_info_table(table_id: int | str, debug: bool = False) -> str:
+    notes = base.Select.notes_from_tables(table_id)
+    info = ""
+    if debug:
+        info += f'[table_id : {table_id}]\n\n'
+    for note in notes:
+        note_content = base.Select.note_content_from_notes(note)
+        if debug:
+            info += f'[note_id : {note}] '
+        info += f'{note_content.time_range} : '
+        if note_content.student_id is None:
+            info += 'пусто\n'
+        else:
+            info += f'{base.Select.fullname_from_users(note_content.student_id)} (id:{note_content.student_id})\n'
+    return info

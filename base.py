@@ -1,5 +1,6 @@
 import psycopg2
 
+from utils import Note
 from config import DB_PORT, DB_HOST, DB_PASS, DB_USER, DB_NAME
 from datetime import datetime
 
@@ -93,10 +94,11 @@ class Select:
             return cursor.fetchone()[0]
 
     @staticmethod
-    def note_content_from_notes(note_id: int | str) -> list:
+    def note_content_from_notes(note_id: int | str) -> Note:
         with connect.cursor() as cursor:
             cursor.execute(f'''SELECT time_range, student_id FROM notes WHERE note_id = {note_id}''')
-            return list(cursor.fetchone())
+            content = list(cursor.fetchone())
+            return Note(content[0], content[1])
 
     @staticmethod
     def fullname_from_users(user_id: int | str) -> str | None:
@@ -145,3 +147,10 @@ class Insert:
             else:
                 cursor.execute(f'''UPDATE notes SET student_id = \'{student_id}\' 
                 WHERE note_id = {note_id}''')
+
+
+def clear_tables():
+    with connect.cursor() as cursor:
+        cursor.execute(f'''TRUNCATE notes, table_notes;
+         INSERT INTO notes (note_id) VALUES (0);
+         INSERT INTO table_notes (table_id) VALUES (0);''')

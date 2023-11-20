@@ -1,3 +1,5 @@
+import aiogram.exceptions
+
 import base
 import keyboards
 import utils
@@ -38,10 +40,10 @@ async def handler_reg(msg: Message):
 
 @router.message(Command('html'))
 async def handler_html(msg: Message):
-    instruction = ("/ml место,дата,время начала,количество слотов,протяженность слота в минутах\n\n"
+    instruction = ("/ml <место>,<дата>,<время начала>,<количество слотов>,<протяженность слота в минутах>\n\n"
                    "Пример: /ml Ломоносова 1400,01.01.2024,10:00,20,15\n\n"
                    "Обязательно в качестве разделителя ставить запятую.")
-    await msg.reply(instruction)
+    await msg.reply(instruction, parse_mode=ParseMode.MARKDOWN)
 
 
 @router.message(Command('send_logs'))
@@ -114,6 +116,45 @@ async def handler_ml(msg: Message):
     hours, minutes = int(datas[2][:2]), int(datas[2][3:])
     utils.add_notes(table_id, note_id, int(datas[3]), int(datas[4]), hours, minutes)
     await msg.reply(f'{datas[0]}\n{datas[1]}', reply_markup=keyboards.create_table_keyboard(table_id, 2))
+
+
+@router.message(Command('replace'))
+async def handler_replace(msg: Message):
+    if not utils.is_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
+        await msg.reply('У вас недостаточно прав!')
+    elif msg.reply_to_message is None:
+        await msg.reply('Вы не переслали сообщение!')
+    elif msg.reply_to_message.reply_markup is None:
+        await msg.reply('Это сообщение не содержит таблицы!')
+    else:
+        try:
+            await bot.edit_message_text(msg.text[9:] + '\n' + msg.reply_to_message.text.split('\n')[-1],
+                                        msg.reply_to_message.chat.id, msg.reply_to_message.message_id,
+                                        reply_markup=msg.reply_to_message.reply_markup)
+        except aiogram.exceptions.TelegramBadRequest as _ex:
+            await msg.reply('Вы указали то же самое место проведения!')
+
+
+@router.message(Command('info'))
+async def handler_info(msg: Message):
+    if msg.reply_to_message is None:
+        await msg.reply('Вы не переслали сообщение!')
+    elif not utils.is_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
+        await msg.reply('У вас недостаточно прав!')
+    elif msg.reply_to_message.reply_markup is None:
+        await msg.reply('Это сообщение не содержит таблицы!')
+    else:
+        table_id = msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(',')[1]
+        await bot.send_message(msg.from_user.id, utils.get_info_table(table_id, msg.text == '/info 1'))
+
+
+@router.message(Command('clear_tables'))
+async def handler_clear_tables(msg: Message):
+    if not utils.is_bot_creator(msg.from_user.id):
+        await bot.send_message(msg.from_user.id, 'У вас нет доступа!')
+    else:
+        base.clear_tables()
+        await bot.send_message(msg.from_user.id, 'Выполнено!')
 
 
 @router.callback_query()
