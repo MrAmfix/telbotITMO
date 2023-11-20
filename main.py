@@ -1,13 +1,10 @@
 import asyncio
 
-from aiogram import Bot, Dispatcher
-from aiogram.enums.parse_mode import ParseMode
-from handlers import router
-from config import BOT_TOKEN
+from aiogram import Dispatcher
+from handlers import router, bot
 
 
 async def main():
-    bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
     dp = Dispatcher()
     dp.include_router(router)
     await bot.delete_webhook(drop_pending_updates=True)

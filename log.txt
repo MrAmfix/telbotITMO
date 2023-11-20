@@ -1,0 +1,21 @@
+[2023-11-15 22:51:44.259638] : [RENAME] : user 1016391777 rename has been renamed to Шафиков Максим
+[2023-11-15 23:01:30.613626] : [RENAME] : user 1016391777 rename has been renamed to Шафиков Максим Азатович
+[2023-11-15 23:02:56.615500] : [CREATE TABLE] user 1016391777 create table 9
+[2023-11-15 23:03:23.282496] : [CREATE TABLE] user 1016391777 create table 10
+[2023-11-18 11:15:05.449094] : [RENAME] : user 1016391777 rename has been renamed to ШАфиков Максим Азатович
+[2023-11-18 11:39:56.015202] : [CREATE TABLE] user 1016391777 create table 11
+[2023-11-18 11:55:34.233947] : [RENAME] : user 1016391777 rename has been renamed to шафиков максим
+[2023-11-18 11:55:50.304610] : [CREATE TABLE] user 1016391777 create table 13
+[2023-11-18 12:00:09.649828] : [RENAME] : user 1016391777 rename has been renamed to Гыгов гыг
+[2023-11-18 15:05:55.156102] : [CREATE TABLE] user 1016391777 create table 14
+[2023-11-18 12:14:19.896819] : [RENAME] : user 1016391777 rename has been renamed to Шафиков Максим Азатович
+[2023-11-18 14:51:38.039673] : [RENAME] : user 1016391777 rename has been renamed to Sh Max
+[2023-11-18 14:55:36.271214] : [CREATE TABLE] user 1016391777 create table 15
+[2023-11-18 18:07:05.139970] : [CREATE TABLE] user 1016391777 create table 16
+[2023-11-18 18:26:39.774597] : [CREATE TABLE] user 1016391777 create table 17
+[2023-11-18 18:32:06.668457] : [CREATE TABLE] user 1016391777 create table 18
+[2023-11-18 18:35:28.769504] : [CREATE TABLE] user 1016391777 create table 1
+[2023-11-18 19:53:46.866779] : [CREATE TABLE] user 1016391777 create table 2
+[2023-11-19 04:10:14.400661] : [CREATE TABLE] user 1016391777 create table 3
+[2023-11-19 10:11:02.054047] : [RENAME]: user 1016391777 changed name (Sh Max) --> (Шафиков Максим)
+[2023-11-20 03:06:54.438734] : [RENAME]: user 1016391777 changed name (Шафиков Максим) --> (Шафиков Максим Азатович)
