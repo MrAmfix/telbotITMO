@@ -79,5 +79,5 @@ def get_info_table(table_id: int | str, debug: bool = False) -> str:
         if note_content.student_id is None:
             info += 'пусто\n'
         else:
-            info += f'{base.Select.fullname_from_users(note_content.student_id)} (id:{note_content.student_id})\n'
+            info += f'{base.Select.fullname_from_users(note_content.student_id)}\n'
     return info

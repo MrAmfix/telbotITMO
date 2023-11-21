@@ -3,7 +3,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import base
 
 
-def create_table_keyboard(table_id: int | str, width: int = 1):
+def create_table_keyboard(table_id: int | str, width: int = 1) -> InlineKeyboardMarkup:
     buttons = []
     buttons_format = []
     for note in base.Select.notes_from_tables(table_id):

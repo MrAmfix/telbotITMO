@@ -7,4 +7,3 @@ DB_USER = config('DB_USER_S')
 DB_PASS = config('DB_PASS_S')
 DB_HOST = config('DB_HOST_S')
 DB_PORT = config('DB_PORT_S')
-

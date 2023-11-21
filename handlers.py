@@ -1,5 +1,4 @@
 import aiogram.exceptions
-
 import base
 import keyboards
 import utils
@@ -57,8 +56,9 @@ async def handler_send_logs(msg: Message):
                 for log in logs:
                     file.write(str(log[0]) + '\n')
             with open('log.txt', 'rb') as file:
-                # Это отвратительно, но я не знаю как по другому...
                 TeleBot(BOT_TOKEN).send_document(msg.from_user.id, file)
+    else:
+        await bot.send_message(msg.from_user.id, 'У вас нет прав!')
 
 
 @router.message(Command('logs'))

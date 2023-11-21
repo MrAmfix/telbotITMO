@@ -32,7 +32,7 @@ class Registration:
 
 class Log:
     @staticmethod
-    def logging(text):
+    def logging(text: str):
         with connect.cursor() as cursor:
             cursor.execute(f'''INSERT INTO logs (log_text) VALUES (\'[{datetime.now()}] : {text}\')''')
 
@@ -43,7 +43,7 @@ class Log:
             WHERE note_id = {note_id}''')
 
     @staticmethod
-    def get_global_logs():
+    def get_global_logs() -> list | None:
         with connect.cursor() as cursor:
             cursor.execute('''SELECT log_text FROM logs''')
             return cursor.fetchall()
