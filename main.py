@@ -1,3 +1,8 @@
+
+""" Модуль: main.py
+Краткое описание: главный файл, который запускает бота
+"""
+
 import asyncio
 
 from aiogram import Dispatcher
@@ -5,6 +10,9 @@ from handlers import router, bot
 
 
 async def main():
+    """
+        Функция запуска бота
+    """
     dp = Dispatcher()
     dp.include_router(router)
     await bot.delete_webhook(drop_pending_updates=True)

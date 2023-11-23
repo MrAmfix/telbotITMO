@@ -1,5 +1,6 @@
 from decouple import config
 
+FLAGS = ['hr', 'hd', 'mr', 'md']
 BOT_TOKEN = config('BOT_TOKEN')
 ID_OWNER = config('ID_OWNER')
 DB_NAME = config('DB_NAME_S')

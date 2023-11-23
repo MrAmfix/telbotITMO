@@ -1,27 +1,60 @@
+
+""" Модуль: utils.py
+Краткое описание: Этот модуль содержит вспомогательные классы и функции.
+"""
+
 import base
+
 from config import ID_OWNER
 from datetime import datetime
 
 
 class Note:
+    """
+        Класс для удобного хранения информации о ячейке.
+
+        :param time_range: Временной промежуток.
+        :param student_id: ID студента или None, если никто не записан в ячейку.
+    """
     def __init__(self, time_range: str, student_id: str | int | None):
         self.time_range = time_range
         self.student_id = student_id
 
 
 def is_admin(admin_list, user_id: int | str) -> bool:
+    # admin_list = await bot.get_chat_administrators(msg.chat.id)
+    """
+        Проверяет, является ли пользователь администратором чата.
+
+        :param admin_list: Список администраторов чата.
+        :param user_id: ID пользователя.
+
+        :return: True, если пользователь администратор, иначе False.
+    """
     admins = [str(user.user.id) for user in admin_list]
     return str(user_id) in admins
 
 
 def is_bot_creator(user_id: int) -> bool:
+    """
+        Проверяет, является ли пользователь создателем бота.
+
+        :param user_id: ID пользователя.
+
+        :return: True, если пользователь является создателем бота, иначе False.
+    """
     if user_id == int(ID_OWNER):
         return True
     return False
 
 
 def is_valid_datas(date: str, time: str, count: int, time_range: int):
-    """ Функция, проверяющая входные данные для создания таблицы
+    """ Функция, проверяющая входные данные для создания таблицы.
+
+    :param date: Дата в формате dd.mm.yyyy.
+    :param time: Время начала в формате hh:mm.
+    :param count: Количество ячеек.
+    :param time_range: Временной промежуток в минутах.
 
     Значения return:
         -1 : неправильная дата
@@ -57,6 +90,16 @@ def is_valid_datas(date: str, time: str, count: int, time_range: int):
 
 
 def add_notes(table_id: int, start_note_id: int, count: int, time_range: int, hours: int, minutes: int):
+    """
+    Вставляет ячейки с временными промежутками в таблицу table_notes.
+
+    :param table_id: ID таблицы, куда нужно вставить ячейки.
+    :param start_note_id: ID начальной ячейки.
+    :param count: Количество ячеек.
+    :param time_range: Временной промежуток.
+    :param hours: Часы начала.
+    :param minutes: Минуты начала.
+    """
     for note_id in range(start_note_id, start_note_id + count):
         range_time = f"{'{:02}'.format(hours)}:{'{:02}'.format(minutes)} - "
         hours += (minutes + time_range) // 60
@@ -67,6 +110,14 @@ def add_notes(table_id: int, start_note_id: int, count: int, time_range: int, ho
 
 
 def get_info_table(table_id: int | str, debug: bool = False) -> str:
+    """
+        Возвращает информацию о заметках в таблице.
+
+        :param table_id: ID таблицы.
+        :param debug: Включен ли режим отладки (по умолчанию False).
+
+        :return: Информация о содержимом таблицы.
+    """
     notes = base.Select.notes_from_tables(table_id)
     info = ""
     if debug:
@@ -79,5 +130,8 @@ def get_info_table(table_id: int | str, debug: bool = False) -> str:
         if note_content.student_id is None:
             info += 'пусто\n'
         else:
-            info += f'{base.Select.fullname_from_users(note_content.student_id)}\n'
+            info += f'{base.Select.fullname_from_users(note_content.student_id)}'
+            if debug:
+                info += f' (id: {base.Select.fullname_from_users(note_content.student_id)})'
+            info += '\n'
     return info

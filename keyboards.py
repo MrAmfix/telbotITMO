@@ -1,9 +1,22 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+""" Модуль: keyboards.py
+Краткое описание: Этот модуль содержит функции создания клавиатур.
+"""
 
 import base
 
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 
 def create_table_keyboard(table_id: int | str, width: int = 1) -> InlineKeyboardMarkup:
+    """
+        Создает клавиатуру с встроенными кнопками для работы с ячейками в таблице.
+
+        :param table_id: ID таблицы.
+        :param width: Количество кнопок в одной строке клавиатуры (по умолчанию 1).
+
+        :return: InlineKeyboardMarkup: Объект клавиатуры с встроенными кнопками.
+    """
     buttons = []
     buttons_format = []
     for note in base.Select.notes_from_tables(table_id):
