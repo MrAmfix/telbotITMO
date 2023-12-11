@@ -9,7 +9,7 @@ from utils import Note
 from config import DB_PORT, DB_HOST, DB_PASS, DB_USER, DB_NAME
 from datetime import datetime
 
-# Устанавливаем соединение с базой данных PostgreSQL
+
 connect = psycopg2.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASS, host=DB_HOST, port=DB_PORT)
 connect.autocommit = True
 

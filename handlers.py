@@ -119,31 +119,11 @@ async def pre_handler_ml(msg: Message):
         Распознает есть ли в команде флаги и форматирует текст команды для передачи ее в основной обработчик.
     """
     if msg.text.split()[1][0] == '-':
-        flag = msg.text.split()[1][1:]
-        if flag in FLAGS:
-            datas = list(map(lambda x: x.strip(), msg.text[8:].split(',')))
-            if len(datas) != 5:
-                await msg.reply('Неправильный формат!')
-                return
-            elif not datas[3].isnumeric() or not datas[4].isnumeric():
-                await msg.reply('Неправильный формат входных данных!')
-                return
-            else:
-                if int(datas[3]) == 0 or int(datas[4]) == 0:
-                    await msg.reply('Неправильный формат входных данных!')
-                    return
-                if flag == 'hr':
-                    datas[3] = str(ceil(int(datas[3]) * 60 / int(datas[4])))
-                elif flag == 'hd':
-                    datas[3] = str(int(datas[3]) * 60 // int(datas[4]))
-                elif flag == 'mr':
-                    datas[3] = str(ceil(int(datas[3]) / int(datas[4])))
-                elif flag == 'md':
-                    datas[3] = str(int(datas[3]) // int(datas[4]))
-                await handler_ml(msg, '/ml ' + ','.join(datas))
-        else:
-            await msg.reply('Некорректный флаг!')
+        command = utils.flag_handler(msg.text)
+        if command[0] != '/':
+            await msg.reply(command)
             return
+        await handler_ml(msg, command)
     else:
         await handler_ml(msg, msg.text)
 
@@ -160,30 +140,11 @@ async def handler_ml(msg: Message, text: str):
         return
     datas = list(map(lambda x: x.strip(), text[4:].split(',')))
     if len(datas) != 5:
-        await msg.reply('Неправильный формат!')
+        await msg.reply('Неправильный формат данных!')
         return
-    if not (re.fullmatch(r'\d{2}.\d{2}.\d{4}', datas[1]) and re.fullmatch(r'\s*\d{2}:\d{2}\s*',
-            datas[2]) and datas[3].isnumeric()) or not datas[4].isnumeric():
-        await msg.reply('Неправильный формат входных данных!')
-        return
-    value = utils.is_valid_datas(datas[1], datas[2], int(datas[3]), int(datas[4]))
-    if value == -1:
-        await msg.reply('Неправильная дата!')
-        return
-    elif value == -2:
-        await msg.reply('Неправильное время начала')
-        return
-    elif value == -3:
-        await msg.reply('Время конечной ячейки для записи превышает 23:59')
-        return
-    elif value == -4:
-        await msg.reply('Количество ячеек не может быть нулем')
-        return
-    elif value == -5:
-        await msg.reply('Интервал не может быть нулем')
-        return
-    elif value == -6:
-        await msg.reply('Не стоит делать столько ячеек (ограничение: 60)')
+    cd = utils.Formats.check_all(datas[1], datas[2], datas[3], datas[4])
+    if cd is not None:
+        await msg.reply(cd)
         return
     table_id = base.Select.max_value('table_id', 'table_notes') + 1
     note_id = base.Select.max_value('note_id', 'notes') + 1
@@ -215,29 +176,11 @@ async def pre_handler_add(msg: Message):
             await msg.reply('Вы не являетесь создателем этой таблицы!')
             return
         if msg.text.split()[1][0] == '-':
-            flag = msg.text.split()[1][1:]
-            if flag in FLAGS:
-                datas = list(map(lambda x: x.strip(), msg.text[9:].split(',')))
-                if len(datas) != 3:
-                    await msg.reply('Неправильный формат!')
-                    return
-                if not datas[1].isnumeric() or not datas[2].isnumeric():
-                    await msg.reply('Неправильный формат входных данных!')
-                    return
-                if int(datas[1]) == 0 or int(datas[2]) == 0:
-                    await msg.reply('Неправильный формат входных данных!')
-                    return
-                if flag == 'hr':
-                    datas[1] = str(ceil(int(datas[1]) * 60 / int(datas[2])))
-                elif flag == 'hd':
-                    datas[1] = str(int(datas[1]) * 60 // int(datas[2]))
-                elif flag == 'mr':
-                    datas[1] = str(ceil(int(datas[1]) / int(datas[2])))
-                elif flag == 'md':
-                    datas[1] = str(int(datas[1]) // int(datas[2]))
-                await handler_add(msg, '/add ' + ','.join(datas))
-            else:
-                await msg.reply('Некорректный флаг!')
+            command = utils.flag_handler(msg.text, False)
+            if command[0] != '/':
+                await msg.reply(command)
+                return
+            await handler_add(msg, command)
         else:
             await handler_add(msg, msg.text)
 
@@ -251,14 +194,9 @@ async def handler_add(msg: Message, text: str):
     if len(datas) != 3:
         await msg.reply('Неправильный формат!')
         return
-    if not re.fullmatch(r'\d{2}:\d{2}', datas[0]) or not datas[1].isnumeric() or not datas[2].isnumeric():
-        await msg.reply('Неправильный формат входных данных')
-        return
-    if int(datas[1]) == 0 or int(datas[2]) == 0:
-        await msg.reply('Неправильный формат входных данных')
-        return
-    if ((int(datas[0][:2]) * 60 + int(datas[0][3:])) + (int(datas[1]) * int(datas[2]))) >= 1440:
-        await msg.reply('Время конечной ячейки для записи превышает 23:59')
+    cd = utils.Formats.check_all('01.01.2024', datas[0], datas[1], datas[2])
+    if cd is not None:
+        await msg.reply(cd)
         return
     table_id = msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(',')[1]
     note_id = base.Select.max_value('note_id', 'notes') + 1

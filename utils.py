@@ -1,12 +1,14 @@
-
 """ Модуль: utils.py
 Краткое описание: Этот модуль содержит вспомогательные классы и функции.
 """
 
 import base
+import re
 
 from config import ID_OWNER
 from datetime import datetime
+from config import FLAGS
+from math import ceil
 
 
 class Note:
@@ -16,9 +18,68 @@ class Note:
         :param time_range: Временной промежуток.
         :param student_id: ID студента или None, если никто не записан в ячейку.
     """
+
     def __init__(self, time_range: str, student_id: str | int | None):
         self.time_range = time_range
         self.student_id = student_id
+
+
+class Formats:
+    def __init__(self, date: str = None, time_start: str = None, count: int = None, time_range: int = None):
+        self.date = date
+        self.time_start = time_start
+        self.count = count
+        self.time_range = time_range
+
+    @staticmethod
+    def check_date(date: str) -> str | None:
+        try:
+            datetime.strptime(date, '%d.%m.%Y')
+            return None
+        except ValueError:
+            return 'Неправильная дата'
+
+    @staticmethod
+    def check_time_start(time_start: str) -> str | None:
+        if not re.fullmatch(r'\d{2}:\d{2}', time_start):
+            return 'Неправильное время!'
+        if not (0 <= int(time_start.strip()[:2]) < 24 and 0 <= int(time_start.strip()[3:]) < 60):
+            return 'Неправильное время!'
+        return None
+
+    @staticmethod
+    def check_count(count: str) -> str | None:
+        if not count.isnumeric():
+            return 'Неправильный формат данных!'
+        if int(count) == 0:
+            return 'Количество ячеек не может быть нулем!'
+        if int(count) > 60:
+            return 'Не стоит делать столько ячеек (ограничение: 60)!'
+        return None
+
+    @staticmethod
+    def check_time_range(time_range: str) -> str | None:
+        if not time_range.isnumeric():
+            return 'Неправильный формат данных!'
+        if int(time_range) == 0:
+            return 'Интервал не может быть нулем!'
+        return None
+
+    @staticmethod
+    def check_all(date: str, time_start: str, count: str, time_range: str) -> str | None:
+        v1, v2, v3, v4 = (Formats.check_date(date), Formats.check_time_start(time_start),
+                          Formats.check_count(count), Formats.check_time_range(time_range))
+        if v1 is not None:
+            return v1
+        if v2 is not None:
+            return v2
+        if v3 is not None:
+            return v3
+        if v4 is not None:
+            return v4
+        if (int(time_start[:2]) * 60 + int(time_start[3:]) + int(count) * int(time_range)) >= 1440:
+            return 'Время конечной записи превышает 23:59!'
+        return None
 
 
 def is_admin(admin_list, user_id: int | str) -> bool:
@@ -48,45 +109,50 @@ def is_bot_creator(user_id: int) -> bool:
     return False
 
 
-def is_valid_datas(date: str, time: str, count: int, time_range: int):
-    """ Функция, проверяющая входные данные для создания таблицы.
-
-    :param date: Дата в формате dd.mm.yyyy.
-    :param time: Время начала в формате hh:mm.
-    :param count: Количество ячеек.
-    :param time_range: Временной промежуток в минутах.
-
-    Значения return:
-        -1 : неправильная дата
-        -2 : неправильное время начала
-        -3 : время окончания превышает 23:59
-        -4 : количество записей - 0
-        -5 : недопустимый интервал
-        -6 : слишком много ячеек
-         1 : входные данные корректны
-    """
-
-    def is_valid_date(dates):
-        try:
-            datetime.strptime(dates, '%d.%m.%Y')
-            return True
-        except ValueError:
-            return False
-
-    if not is_valid_date(date.strip()):
-        return -1
-    if not (0 <= int(time.strip()[:2]) < 24 and 0 <= int(time.strip()[3:]) < 60):
-        return -2
-    time_end = int(time.strip()[:2]) * 60 + int(time.strip()[3:]) + count * time_range
-    if time_end >= 1440:
-        return -3
-    if count == 0:
-        return -4
-    if time_range == 0:
-        return -5
-    if count > 60:
-        return -6
-    return 1
+def flag_handler(msg: str, with_date: bool = True) -> str:
+    if with_date:
+        flag = msg.split()[1][1:]
+        if flag in FLAGS:
+            datas = list(map(lambda x: x.strip(), msg[8:].split(',')))
+            if len(datas) != 5:
+                return 'Неправильный формат!'
+            elif not datas[3].isnumeric() or not datas[4].isnumeric():
+                return 'Неправильный формат входных данных!'
+            else:
+                if int(datas[3]) == 0 or int(datas[4]) == 0:
+                    return 'Неправильный формат входных данных!'
+                if flag == 'hr':
+                    datas[3] = str(ceil(int(datas[3]) * 60 / int(datas[4])))
+                elif flag == 'hd':
+                    datas[3] = str(int(datas[3]) * 60 // int(datas[4]))
+                elif flag == 'mr':
+                    datas[3] = str(ceil(int(datas[3]) / int(datas[4])))
+                elif flag == 'md':
+                    datas[3] = str(int(datas[3]) // int(datas[4]))
+                return '/ml ' + ','.join(datas)
+        else:
+            return 'Некорректный флаг!'
+    else:
+        flag = msg.split()[1][1:]
+        if flag in FLAGS:
+            datas = list(map(lambda x: x.strip(), msg[9:].split(',')))
+            if len(datas) != 3:
+                return 'Неправильный формат!'
+            if not datas[1].isnumeric() or not datas[2].isnumeric():
+                return 'Неправильный формат входных данных!'
+            if int(datas[1]) == 0 or int(datas[2]) == 0:
+                return 'Неправильный формат входных данных!'
+            if flag == 'hr':
+                datas[1] = str(ceil(int(datas[1]) * 60 / int(datas[2])))
+            elif flag == 'hd':
+                datas[1] = str(int(datas[1]) * 60 // int(datas[2]))
+            elif flag == 'mr':
+                datas[1] = str(ceil(int(datas[1]) / int(datas[2])))
+            elif flag == 'md':
+                datas[1] = str(int(datas[1]) // int(datas[2]))
+            return '/add ' + ','.join(datas)
+        else:
+            return 'Некорректный флаг!'
 
 
 def add_notes(table_id: int, start_note_id: int, count: int, time_range: int, hours: int, minutes: int):
