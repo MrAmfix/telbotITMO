@@ -14,6 +14,25 @@ connect = psycopg2.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASS, host=
 connect.autocommit = True
 
 
+def get_template(user_id: int | str) -> dict | None:
+    with connect.cursor() as cursor:
+        cursor.execute(f'''SELECT templates FROM users WHERE user_id = \'{user_id}\'''')
+        templates = cursor.fetchone()[0]
+        if templates is not None:
+            return dict(templates)
+        return None
+
+
+def insert_template(user_id: int | str, keyword: str, template: str):
+    with connect.cursor() as cursor:
+        if get_template(user_id) is None:
+            cursor.execute(f'''update users set templates = '{{\"{keyword}\":
+             \"{template}\"}}' where user_id = \'{user_id}\'''')
+        else:
+            cursor.execute(f'''update users set templates = jsonb_set(templates, \'{{{keyword}}}\',
+             \'\"{template}\"\', TRUE) WHERE user_id = \'{user_id}\';''')
+
+
 class Registration:
     """
         Класс: Registration

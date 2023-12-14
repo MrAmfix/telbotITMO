@@ -25,12 +25,9 @@ class Note:
 
 
 class Formats:
-    def __init__(self, date: str = None, time_start: str = None, count: int = None, time_range: int = None):
-        self.date = date
-        self.time_start = time_start
-        self.count = count
-        self.time_range = time_range
-
+    """
+    Класс для проверки корректности данных для создания / дополнения таблиц
+    """
     @staticmethod
     def check_date(date: str) -> str | None:
         try:
@@ -110,49 +107,41 @@ def is_bot_creator(user_id: int) -> bool:
 
 
 def flag_handler(msg: str, with_date: bool = True) -> str:
-    if with_date:
-        flag = msg.split()[1][1:]
-        if flag in FLAGS:
+    """
+    Переводит команду с флагом в стандартный формат
+
+    :param msg: команда с флагом
+    :param with_date: True - строка с датой, False - без даты
+
+    :return: команда в стандартном формате, либо сообщение об ошибке
+    """
+    tag_command = msg.split()[0]
+    flag = msg.split()[1][1:]
+    if flag in FLAGS:
+        if with_date:
+            ind = 3
             datas = list(map(lambda x: x.strip(), msg[8:].split(',')))
-            if len(datas) != 5:
-                return 'Неправильный формат!'
-            elif not datas[3].isnumeric() or not datas[4].isnumeric():
-                return 'Неправильный формат входных данных!'
-            else:
-                if int(datas[3]) == 0 or int(datas[4]) == 0:
-                    return 'Неправильный формат входных данных!'
-                if flag == 'hr':
-                    datas[3] = str(ceil(int(datas[3]) * 60 / int(datas[4])))
-                elif flag == 'hd':
-                    datas[3] = str(int(datas[3]) * 60 // int(datas[4]))
-                elif flag == 'mr':
-                    datas[3] = str(ceil(int(datas[3]) / int(datas[4])))
-                elif flag == 'md':
-                    datas[3] = str(int(datas[3]) // int(datas[4]))
-                return '/ml ' + ','.join(datas)
         else:
-            return 'Некорректный флаг!'
-    else:
-        flag = msg.split()[1][1:]
-        if flag in FLAGS:
+            ind = 1
             datas = list(map(lambda x: x.strip(), msg[9:].split(',')))
-            if len(datas) != 3:
-                return 'Неправильный формат!'
-            if not datas[1].isnumeric() or not datas[2].isnumeric():
-                return 'Неправильный формат входных данных!'
-            if int(datas[1]) == 0 or int(datas[2]) == 0:
+        if len(datas) != (ind + 2):
+            return 'Неправильный формат!'
+        elif not datas[ind].isnumeric() or not datas[ind + 1].isnumeric():
+            return 'Неправильный формат входных данных!'
+        else:
+            if int(datas[ind]) == 0 or int(datas[ind + 1]) == 0:
                 return 'Неправильный формат входных данных!'
             if flag == 'hr':
-                datas[1] = str(ceil(int(datas[1]) * 60 / int(datas[2])))
+                datas[ind] = str(ceil(int(datas[ind]) * 60 / int(datas[ind + 1])))
             elif flag == 'hd':
-                datas[1] = str(int(datas[1]) * 60 // int(datas[2]))
+                datas[ind] = str(int(datas[ind]) * 60 // int(datas[ind + 1]))
             elif flag == 'mr':
-                datas[1] = str(ceil(int(datas[1]) / int(datas[2])))
+                datas[ind] = str(ceil(int(datas[ind]) / int(datas[ind + 1])))
             elif flag == 'md':
-                datas[1] = str(int(datas[1]) // int(datas[2]))
-            return '/add ' + ','.join(datas)
-        else:
-            return 'Некорректный флаг!'
+                datas[ind] = str(int(datas[ind]) // int(datas[ind + 1]))
+            return tag_command + ' ' + ','.join(datas)
+    else:
+        return 'Некорректный флаг!'
 
 
 def add_notes(table_id: int, start_note_id: int, count: int, time_range: int, hours: int, minutes: int):

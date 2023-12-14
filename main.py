@@ -13,6 +13,7 @@ async def main():
     """
         Функция запуска бота
     """
+    print('Bot started!')
     dp = Dispatcher()
     dp.include_router(router)
     await bot.delete_webhook(drop_pending_updates=True)
@@ -20,4 +21,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print('Bot stopped!')

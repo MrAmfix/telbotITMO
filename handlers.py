@@ -14,9 +14,8 @@ from aiogram import Router, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.filters import Command
-from config import BOT_TOKEN, FLAGS
+from config import BOT_TOKEN
 from datetime import datetime
-from math import ceil
 
 bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
 router = Router()
@@ -47,6 +46,7 @@ async def handler_reg(msg: Message):
             await bot.send_message(msg.from_user.id, 'Вы успешно зарегистрировались!')
     else:
         await bot.send_message(msg.from_user.id, 'Неправильный формат!')
+
 
 
 @router.message(Command('html'))
@@ -118,6 +118,9 @@ async def pre_handler_ml(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО АДМИНИСТРАТОРАМ!
         Распознает есть ли в команде флаги и форматирует текст команды для передачи ее в основной обработчик.
     """
+    if re.fullmatch(r'/ml\s*', msg.text):
+        await msg.reply('Не указаны данные!')
+        return
     if msg.text.split()[1][0] == '-':
         command = utils.flag_handler(msg.text)
         if command[0] != '/':
@@ -161,6 +164,9 @@ async def pre_handler_add(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО СОЗДАТЕЛЮ ТАБЛИЦЫ!
         Распознает есть ли в команде флаги и форматирует текст команды для передачи ее в основной обработчик.
     """
+    if re.fullmatch(r'/add\s*', msg.text):
+        await msg.reply('Не указаны данные!')
+        return
     if msg.chat.type == 'private':
         await msg.reply('Эта команда не доступна в личных сообщениях')
         return
@@ -251,6 +257,20 @@ async def handler_info(msg: Message):
             await bot.send_message(msg.from_user.id, utils.get_info_table(table_id, True))
         else:
             await bot.send_message(msg.from_user.id, utils.get_info_table(table_id))
+
+
+@router.message(Command('new_template'))
+async def handler_new_template(msg: Message):
+    """ Обработчик команды /new_template
+
+        Создает шаблон для создания таблицы
+        /new_template <flag~> <time_start>,<count / all_time>,<time_range>
+    """
+    if re.fullmatch(r'/new_template\s*', msg.text):
+        await msg.reply('Не указаны данные!')
+        return
+    if msg.text.split()[1][0] == '-':
+        pass
 
 
 @router.message(Command('clear_tables'))
