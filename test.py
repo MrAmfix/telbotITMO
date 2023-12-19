@@ -1,10 +1,10 @@
 import psycopg2
 from config import DB_PORT, DB_HOST, DB_PASS, DB_USER, DB_NAME
-import json
 
 
 connect = psycopg2.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASS, host=DB_HOST, port=DB_PORT)
 connect.autocommit = True
+
 
 if __name__ == '__main__':
     with connect.cursor() as cursor:

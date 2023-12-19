@@ -4,18 +4,19 @@
 """
 
 import aiogram.exceptions
-import base
-import keyboards
-import utils
 import re
 
-from telebot import TeleBot
 from aiogram import Router, Bot
-from aiogram.types import Message, CallbackQuery
+from utils import keyboards, utils, base
+from telebot import TeleBot
+from aiogram.types import Message
+from aiogram.fsm.context import FSMContext
 from aiogram.enums.parse_mode import ParseMode
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 from config import BOT_TOKEN
-from datetime import datetime
+from utils.states import States
+from utils.utils import Datas, with_registration
+
 
 bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
 router = Router()
@@ -46,7 +47,6 @@ async def handler_reg(msg: Message):
             await bot.send_message(msg.from_user.id, 'Вы успешно зарегистрировались!')
     else:
         await bot.send_message(msg.from_user.id, 'Неправильный формат!')
-
 
 
 @router.message(Command('html'))
@@ -83,15 +83,16 @@ async def handler_send_logs(msg: Message):
         if len(logs) == 0:
             await bot.send_message(msg.from_user.id, 'Логов нет')
         else:
-            with open('log.txt', 'w', encoding='utf-8') as file:
+            with open('../log.txt', 'w', encoding='utf-8') as file:
                 for log in logs:
                     file.write(str(log[0]) + '\n')
-            with open('log.txt', 'rb') as file:
+            with open('../log.txt', 'rb') as file:
                 TeleBot(BOT_TOKEN).send_document(msg.from_user.id, file)
     else:
         await bot.send_message(msg.from_user.id, 'У вас нет прав!')
 
 
+@with_registration
 @router.message(Command('logs'))
 async def handler_logs(msg: Message):
     """ Обработчик команды /logs
@@ -111,14 +112,15 @@ async def handler_logs(msg: Message):
         await bot.send_message(msg.from_user.id, 'Вы не являетесь администратором чата!')
 
 
-@router.message(Command('ml'))
+@with_registration
+@router.message(Command('ml', 'make_list'))
 async def pre_handler_ml(msg: Message):
     """ Предварительный обработчик команды /ml
 
         КОМАНДА ДОСТУПНА ТОЛЬКО АДМИНИСТРАТОРАМ!
         Распознает есть ли в команде флаги и форматирует текст команды для передачи ее в основной обработчик.
     """
-    if re.fullmatch(r'/ml\s*', msg.text):
+    if re.fullmatch(r'/(ml|make_list)\s*', msg.text):
         await msg.reply('Не указаны данные!')
         return
     if msg.text.split()[1][0] == '-':
@@ -131,30 +133,39 @@ async def pre_handler_ml(msg: Message):
         await handler_ml(msg, msg.text)
 
 
-async def handler_ml(msg: Message, text: str):
+async def handler_ml(msg: Message, text: str, edit_id: int = None, edit_mode: bool = False):
     """ Обработчик команды /ml
         Создает новую таблицу и отправляет сообщение с клавиатурой для взаимодействия пользователей.
     """
+    if edit_mode:
+        uid = edit_id
+    else:
+        uid = msg.from_user.id
     if msg.chat.type == 'private':
         await msg.reply('Я не делаю таблицы в личных сообщениях')
         return
-    if not utils.is_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
+    if not utils.is_admin(await bot.get_chat_administrators(msg.chat.id), uid):
         await msg.reply('У вас нет прав!')
         return
-    datas = list(map(lambda x: x.strip(), text[4:].split(',')))
+    datas = list(map(lambda x: x.strip(), text[len(text.split()[0]) + 1:].split(',')))
     if len(datas) != 5:
         await msg.reply('Неправильный формат данных!')
         return
-    cd = utils.Formats.check_all(datas[1], datas[2], datas[3], datas[4])
+    dataf = Datas(place=datas[0], date=datas[1], time_start=datas[2], count=datas[3], time_range=datas[4])
+    cd = utils.Formats.check_all(dataf.date, dataf.time_start, dataf.count, dataf.time_range)
     if cd is not None:
         await msg.reply(cd)
         return
     table_id = base.Select.max_value('table_id', 'table_notes') + 1
     note_id = base.Select.max_value('note_id', 'notes') + 1
-    base.Insert.table_into_tables(table_id, msg.from_user.id)
-    hours, minutes = int(datas[2][:2]), int(datas[2][3:])
-    utils.add_notes(table_id, note_id, int(datas[3]), int(datas[4]), hours, minutes)
-    await msg.reply(f'{datas[0]}\n{datas[1]}', reply_markup=keyboards.create_table_keyboard(table_id, 2))
+    base.Insert.table_into_tables(table_id, uid)
+    hours, minutes = int(dataf.time_start[:2]), int(dataf.time_start[3:])
+    utils.add_notes(table_id, note_id, int(dataf.count), int(dataf.time_range), hours, minutes)
+    if not edit_mode:
+        await msg.reply(f'{dataf.place}\n{dataf.date}', reply_markup=keyboards.create_table_keyboard(table_id, 2))
+    else:
+        await bot.edit_message_text(f'{dataf.place}\n{dataf.date}', msg.chat.id,
+                                    msg.message_id, reply_markup=keyboards.create_table_keyboard(table_id, 2))
 
 
 @router.message(Command('add'))
@@ -196,11 +207,12 @@ async def handler_add(msg: Message, text: str):
 
         Добавляет новые ячейки в уже существующую таблицу и обновляет клавиатуру.
     """
-    datas = list(map(lambda x: x.strip(), text[5:].split(',')))
+    datas = list(map(lambda x: x.strip(), text[len(text.split()[0]) + 1:].split(',')))
     if len(datas) != 3:
         await msg.reply('Неправильный формат!')
         return
-    cd = utils.Formats.check_all('01.01.2024', datas[0], datas[1], datas[2])
+    dataf = Datas(time_start=datas[0], count=datas[1], time_range=datas[2])
+    cd = utils.Formats.check_all('01.01.2024', dataf.time_start, dataf.count, dataf.time_range)
     if cd is not None:
         await msg.reply(cd)
         return
@@ -208,11 +220,12 @@ async def handler_add(msg: Message, text: str):
     note_id = base.Select.max_value('note_id', 'notes') + 1
     note_old_max = max(list(map(lambda x: int(x), base.Select.notes_from_tables(table_id))))
     time_range = base.Select.note_content_from_notes(note_old_max).time_range[8:]
-    if (int(time_range[:2]) * 60 + int(time_range[3:])) > (int(datas[0][:2]) * 60 + int(datas[0][3:])):
+    if (int(time_range[:2]) * 60 + int(time_range[3:])) > (int(dataf.time_start[:2]) * 60 + int(dataf.time_start[3:])):
         await msg.reply('Временные промежутки пересекаются!')
         return
     else:
-        utils.add_notes(int(table_id), note_id, int(datas[1]), int(datas[2]), int(datas[0][:2]), int(datas[0][3:]))
+        utils.add_notes(int(table_id), note_id, int(dataf.count), int(dataf.time_range),
+                        int(dataf.time_start[:2]), int(dataf.time_start[3:]))
         keyboard = keyboards.create_table_keyboard(table_id, 2)
         await bot.edit_message_text(msg.reply_to_message.text, msg.chat.id,
                                     msg.reply_to_message.message_id, reply_markup=keyboard)
@@ -226,6 +239,9 @@ async def handler_replace(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО АДМИНИСТРАТОРАМ!
         Заменяет место проведения в пересланной таблице.
     """
+    if msg.chat.type == 'private':
+        await msg.reply('Эта команда не доступна в личных сообщениях')
+        return
     if not utils.is_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
         await msg.reply('У вас недостаточно прав!')
     elif msg.reply_to_message is None:
@@ -259,18 +275,75 @@ async def handler_info(msg: Message):
             await bot.send_message(msg.from_user.id, utils.get_info_table(table_id))
 
 
-@router.message(Command('new_template'))
-async def handler_new_template(msg: Message):
+@with_registration
+@router.message(Command('ct', 'create_temp'))
+async def handler_new_template(msg: Message, state: FSMContext):
     """ Обработчик команды /new_template
 
         Создает шаблон для создания таблицы
-        /new_template <flag~> <time_start>,<count / all_time>,<time_range>
+        /create_temp <flag~> <time_start>,<count / all_time>,<time_range>
+        /ct <~flag> <time_start>,<count / all_time>,<time_range>
     """
-    if re.fullmatch(r'/new_template\s*', msg.text):
+    if re.fullmatch(r'/(create_temp|ct)\s*', msg.text):
         await msg.reply('Не указаны данные!')
         return
     if msg.text.split()[1][0] == '-':
-        pass
+        normal_form = (utils.flag_handler(msg.text.replace('ct', 'ml')
+                                          .replace('create_temp', 'ml'), with_date=False))
+        if normal_form[0] != '/':
+            await msg.reply(normal_form)
+            return
+    else:
+        normal_form = (msg.text.replace('ct', 'ml').replace('create_temp', 'ml'))
+    datas = list(map(lambda x: x.strip(), normal_form[4:].split(',')))
+    if len(datas) != 3:
+        await msg.reply('Неправильный формат!')
+        return
+    v = utils.Formats.check_all('11.11.2023', datas[0], datas[1], datas[2])
+    if v is not None:
+        await msg.reply(v)
+        return
+    await msg.reply('Теперь введите ключевое слово, по которому вы будете получать этот шаблон')
+    await state.set_state(States.wait_keyword)
+    await state.update_data(template_text='/ml ' + ','.join(datas))
+
+
+@router.message(StateFilter(States.wait_keyword))
+async def handler_wait_keyword(msg: Message, state: FSMContext):
+    if msg.text.count(' ') > 0:
+        await msg.reply('Название шаблона не должно содержать пробелы!')
+        return
+    get_template = await state.get_data()
+    base.Insert.new_template(msg.from_user.id, msg.text, get_template.get('template_text'))
+    await msg.reply('Шаблон успешно сохранен!')
+    await state.set_state()
+
+
+@with_registration
+@router.message(Command('ml_temp', 'mlt'))
+async def handler_make_list_from_template(msg: Message):
+    # /ml_temp <place>,<date>
+    if re.fullmatch(r'/(ml_temp|mlt)\s*', msg.text):
+        await msg.reply('Не указаны данные!')
+        return
+    if msg.chat.type == 'private':
+        await msg.reply('Я не делаю таблицы в личных сообщениях')
+        return
+    if not utils.is_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
+        await msg.reply('У вас нет прав!')
+        return
+    datas = list(map(lambda x: x.strip(), msg.text[len(msg.text.split()[0]) + 1:].split(',')))
+    if len(datas) != 2:
+        await msg.reply('Неправильный формат данных!')
+        return
+    if utils.Formats.check_date(datas[1]) is not None:
+        await msg.reply(utils.Formats.check_date(datas[1]))
+        return
+    keyboard = keyboards.create_templates_keyboard(msg.from_user.id, datas[0], datas[1])
+    if keyboard is None:
+        await msg.reply('У вас нет шаблонов!')
+        return
+    await msg.reply('Выберите шаблон', reply_markup=keyboard)
 
 
 @router.message(Command('clear_tables'))
@@ -285,59 +358,3 @@ async def handler_clear_tables(msg: Message):
     else:
         base.clear_tables()
         await bot.send_message(msg.from_user.id, 'Выполнено!')
-
-
-@router.callback_query()
-async def call(callback: CallbackQuery):
-    """ Обработчик нажатий на кнопки клавиатур
-
-        Обработчик определяет текст, действие, ID Таблицы и ID ячейки и выполняет инструкции.
-        Добавление: добавляет зарегистрированного пользователя в ячейку и обновляет клавиатуру.
-        Удаление: проверяет может ли пользователь изменять содержимое ячейки и если да, то удаляет содержимое.
-    """
-    if not base.Registration.is_registered(callback.from_user.id):
-        await bot.send_message(callback.from_user.id, 'Вы не зарегистрированы!')
-        return
-    if base.Log.get_status(callback.from_user.id) == 1 and \
-            utils.is_admin(await bot.get_chat_administrators(callback.message.chat.id), callback.from_user.id):
-        base.Log.set_status(callback.from_user.id, 0)
-        content = base.Log.get_log_from_note(callback.data[4:].split(',')[0])
-        if content == "":
-            await bot.send_message(callback.from_user.id, 'Логов нет!')
-        else:
-            await bot.send_message(callback.from_user.id, f'Логи по запросу:\n\n{content}')
-        return
-    note_id = callback.data[4:].split(',')[0]
-    table_id = callback.data[4:].split(',')[1]
-    if callback.data[:4] == 'add_':
-        base.Insert.student_into_note(note_id, callback.from_user.id)
-        keyboard = keyboards.create_table_keyboard(table_id, 2)
-        base.Log.insert_log_into_note(note_id, f'[{datetime.now()}] : '
-                                               f'[SUCCESSFUL ADD]: user {callback.from_user.id} added')
-        await bot.edit_message_text(f'{callback.message.text}', callback.message.chat.id,
-                                    callback.message.message_id, reply_markup=keyboard)
-        pass
-    elif callback.data[:4] == 'del_':
-        student_id = base.Select.student_id_from_note(note_id)
-        if student_id is None:
-            await bot.send_message(callback.message.chat.id, 'ERROR!!!')
-            return
-        msg = callback.message
-        if utils.is_admin(await bot.get_chat_administrators(msg.chat.id), callback.from_user.id):
-            base.Insert.student_into_note(note_id, 'null')
-            keyboard = keyboards.create_table_keyboard(table_id, 2)
-            base.Log.insert_log_into_note(note_id, f'[{datetime.now()}] : [SUCCESSFUL DEL]: user {student_id} '
-                                                   f'was deleted by admin {callback.from_user.id}')
-            await bot.edit_message_text(f'{callback.message.text}', callback.message.chat.id,
-                                        callback.message.message_id, reply_markup=keyboard)
-        elif str(student_id) == str(callback.from_user.id):
-            base.Insert.student_into_note(note_id, 'null')
-            keyboard = keyboards.create_table_keyboard(table_id, 2)
-            base.Log.insert_log_into_note(note_id, f'[{datetime.now()}] : [SUCCESSFUL DEL]: user {student_id}'
-                                                   f'delete itself')
-            await bot.edit_message_text(f'{callback.message.text}', callback.message.chat.id,
-                                        callback.message.message_id, reply_markup=keyboard)
-        else:
-            await bot.send_message(callback.from_user.id, 'Вы не можете удалить запись!')
-    else:
-        await bot.send_message(callback.message.chat.id, 'ERROR CALLBACK!!!')

@@ -1,13 +1,17 @@
+
 """ Модуль: utils.py
 Краткое описание: Этот модуль содержит вспомогательные классы и функции.
 """
 
-import base
+
 import re
 
-from config import ID_OWNER
+from aiogram import Bot
+from aiogram.enums import ParseMode
+from aiogram.types import Message, CallbackQuery
+from utils import base
+from config import ID_OWNER, FLAGS, BOT_TOKEN
 from datetime import datetime
-from config import FLAGS
 from math import ceil
 
 
@@ -22,6 +26,19 @@ class Note:
     def __init__(self, time_range: str, student_id: str | int | None):
         self.time_range = time_range
         self.student_id = student_id
+
+
+class Datas:
+    """
+        Класс для удобного хранения данных при создании / редактировании таблиц
+    """
+    def __init__(self, place: str = None, date: str = None, time_start: str = None,
+                 count: str | int = None, time_range: str | int = None):
+        self.place = place
+        self.date = date
+        self.time_start = time_start
+        self.count = count
+        self.time_range = time_range
 
 
 class Formats:
@@ -79,6 +96,18 @@ class Formats:
         return None
 
 
+def with_registration(func):
+    async def checker(*args, **kwargs):
+        msg: CallbackQuery | Message = args[0]
+        if not base.Registration.is_registered(msg.from_user.id):
+            bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+            await bot.send_message(msg.from_user.id, 'Сначала пройдите регистрацию!')
+            await bot.session.close()
+            return
+        return await func(*args, **kwargs)
+    return checker
+
+
 def is_admin(admin_list, user_id: int | str) -> bool:
     # admin_list = await bot.get_chat_administrators(msg.chat.id)
     """
@@ -120,10 +149,11 @@ def flag_handler(msg: str, with_date: bool = True) -> str:
     if flag in FLAGS:
         if with_date:
             ind = 3
-            datas = list(map(lambda x: x.strip(), msg[8:].split(',')))
+            datas = list(map(lambda x: x.strip(), msg[len(tag_command):].strip().split(',')))
         else:
             ind = 1
-            datas = list(map(lambda x: x.strip(), msg[9:].split(',')))
+            datas = list(map(lambda x: x.strip(), msg[len(tag_command):].strip().split(',')))
+        datas[0] = datas[0][len(flag) + 1:].strip()
         if len(datas) != (ind + 2):
             return 'Неправильный формат!'
         elif not datas[ind].isnumeric() or not datas[ind + 1].isnumeric():
@@ -187,6 +217,6 @@ def get_info_table(table_id: int | str, debug: bool = False) -> str:
         else:
             info += f'{base.Select.fullname_from_users(note_content.student_id)}'
             if debug:
-                info += f' (id: {base.Select.fullname_from_users(note_content.student_id)})'
+                info += f' (id: {note_content.student_id})'
             info += '\n'
     return info

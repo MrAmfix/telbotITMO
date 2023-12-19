@@ -5,32 +5,14 @@
 
 import psycopg2
 
-from utils import Note
 from config import DB_PORT, DB_HOST, DB_PASS, DB_USER, DB_NAME
+from utils.logger import logger
+from utils.utils import Note
 from datetime import datetime
 
 
 connect = psycopg2.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASS, host=DB_HOST, port=DB_PORT)
 connect.autocommit = True
-
-
-def get_template(user_id: int | str) -> dict | None:
-    with connect.cursor() as cursor:
-        cursor.execute(f'''SELECT templates FROM users WHERE user_id = \'{user_id}\'''')
-        templates = cursor.fetchone()[0]
-        if templates is not None:
-            return dict(templates)
-        return None
-
-
-def insert_template(user_id: int | str, keyword: str, template: str):
-    with connect.cursor() as cursor:
-        if get_template(user_id) is None:
-            cursor.execute(f'''update users set templates = '{{\"{keyword}\":
-             \"{template}\"}}' where user_id = \'{user_id}\'''')
-        else:
-            cursor.execute(f'''update users set templates = jsonb_set(templates, \'{{{keyword}}}\',
-             \'\"{template}\"\', TRUE) WHERE user_id = \'{user_id}\';''')
 
 
 class Registration:
@@ -182,6 +164,7 @@ class Select:
                 cursor.execute(f'''SELECT MAX({column}) FROM {table}''')
                 return int(cursor.fetchone()[0])
         except Exception as _ex:
+            logger.info(f'ERROR: {_ex}')
             return None
 
     @staticmethod
@@ -222,6 +205,7 @@ class Select:
                 cursor.execute(f'''SELECT full_name FROM users WHERE user_id = \'{user_id}\'''')
                 return cursor.fetchone()[0]
         except Exception as _ex:
+            logger.info(f'ERROR: {_ex}')
             return None
 
     @staticmethod
@@ -237,6 +221,7 @@ class Select:
                 cursor.execute(f'''SELECT creator_id FROM table_notes WHERE table_id = {table_id}''')
                 return cursor.fetchone()[0]
         except Exception as _ex:
+            logger.info(f'ERROR: {_ex}')
             return None
 
     @staticmethod
@@ -253,6 +238,27 @@ class Select:
             if uid is not None:
                 return uid[0]
             return None
+
+    @staticmethod
+    def user_templates(user_id: int | str) -> dict | None:
+        """
+            Получает словарь шаблонов, созданных пользователем
+
+            :param user_id: ID пользователя
+            :return: словарь или None (при отсутствии шаблонов)
+        """
+        with connect.cursor() as cursor:
+            cursor.execute(f'''SELECT templates FROM users WHERE user_id = \'{user_id}\'''')
+            templates = cursor.fetchone()[0]
+            if templates is not None:
+                return dict(templates)
+            return None
+
+    @staticmethod
+    def value_from_dict(dict_key: int) -> str | None:
+        with connect.cursor() as cursor:
+            cursor.execute(f'''SELECT dict_value FROM dict WHERE dict_key = {dict_key}''')
+            return cursor.fetchone()[0]
 
 
 class Insert:
@@ -311,6 +317,30 @@ class Insert:
             else:
                 cursor.execute(f'''UPDATE notes SET student_id = \'{student_id}\' 
                 WHERE note_id = {note_id}''')
+
+    @staticmethod
+    def new_template(user_id: int | str, keyword: str, template: str):
+        """
+            Вставляет шаблон, созданный пользователем
+
+            :param user_id: ID пользователя
+            :param keyword: Ключевое слово для получения шаблона
+            :param template: Текст шаблона
+        """
+        with connect.cursor() as cursor:
+            if Select.user_templates(user_id) is None:
+                cursor.execute(f'''update users set templates = '{{\"{keyword}\":
+                 \"{template}\"}}' where user_id = \'{user_id}\'''')
+            else:
+                cursor.execute(f'''update users set templates = jsonb_set(templates, \'{{{keyword}}}\',
+                 \'\"{template}\"\', TRUE) WHERE user_id = \'{user_id}\'''')
+
+    @staticmethod
+    def value_into_dict(value: str) -> int:
+        with connect.cursor() as cursor:
+            id = Select.max_value('dict_key', 'dict') + 1
+            cursor.execute(f'''INSERT INTO dict (dict_key, dict_value) VALUES ({id}, \'{value}\')''')
+            return id
 
 
 def clear_tables():
