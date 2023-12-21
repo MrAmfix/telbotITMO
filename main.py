@@ -9,12 +9,14 @@ from aiogram import Dispatcher
 from utils.logger import logger
 from bot.handlers import router, bot
 from bot.callbacks import router_callback
+from utils.base import init_base
 
 
 async def main():
     """
         Функция запуска бота
     """
+    init_base()
     logger.info('Bot started!')
     dp = Dispatcher()
     dp.include_routers(router, router_callback)

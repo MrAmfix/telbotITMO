@@ -5,6 +5,7 @@
 
 
 import re
+import typing as tp
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
@@ -23,7 +24,7 @@ class Note:
         :param student_id: ID студента или None, если никто не записан в ячейку.
     """
 
-    def __init__(self, time_range: str, student_id: str | int | None):
+    def __init__(self, time_range: str, student_id: tp.Union[str, int, None]):
         self.time_range = time_range
         self.student_id = student_id
 
@@ -33,7 +34,7 @@ class Datas:
         Класс для удобного хранения данных при создании / редактировании таблиц
     """
     def __init__(self, place: str = None, date: str = None, time_start: str = None,
-                 count: str | int = None, time_range: str | int = None):
+                 count: tp.Union[str, int, None] = None, time_range: tp.Union[str, int, None] = None):
         self.place = place
         self.date = date
         self.time_start = time_start
@@ -46,7 +47,7 @@ class Formats:
     Класс для проверки корректности данных для создания / дополнения таблиц
     """
     @staticmethod
-    def check_date(date: str) -> str | None:
+    def check_date(date: str) -> tp.Optional[str]:
         try:
             datetime.strptime(date, '%d.%m.%Y')
             return None
@@ -54,7 +55,7 @@ class Formats:
             return 'Неправильная дата'
 
     @staticmethod
-    def check_time_start(time_start: str) -> str | None:
+    def check_time_start(time_start: str) -> tp.Optional[str]:
         if not re.fullmatch(r'\d{2}:\d{2}', time_start):
             return 'Неправильное время!'
         if not (0 <= int(time_start.strip()[:2]) < 24 and 0 <= int(time_start.strip()[3:]) < 60):
@@ -62,7 +63,7 @@ class Formats:
         return None
 
     @staticmethod
-    def check_count(count: str) -> str | None:
+    def check_count(count: str) -> tp.Optional[str]:
         if not count.isnumeric():
             return 'Неправильный формат данных!'
         if int(count) == 0:
@@ -72,7 +73,7 @@ class Formats:
         return None
 
     @staticmethod
-    def check_time_range(time_range: str) -> str | None:
+    def check_time_range(time_range: str) -> tp.Optional[str]:
         if not time_range.isnumeric():
             return 'Неправильный формат данных!'
         if int(time_range) == 0:
@@ -80,7 +81,7 @@ class Formats:
         return None
 
     @staticmethod
-    def check_all(date: str, time_start: str, count: str, time_range: str) -> str | None:
+    def check_all(date: str, time_start: str, count: str, time_range: str) -> tp.Optional[str]:
         v1, v2, v3, v4 = (Formats.check_date(date), Formats.check_time_start(time_start),
                           Formats.check_count(count), Formats.check_time_range(time_range))
         if v1 is not None:
@@ -96,19 +97,7 @@ class Formats:
         return None
 
 
-def with_registration(func):
-    async def checker(*args, **kwargs):
-        msg: CallbackQuery | Message = args[0]
-        if not base.Registration.is_registered(msg.from_user.id):
-            bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
-            await bot.send_message(msg.from_user.id, 'Сначала пройдите регистрацию!')
-            await bot.session.close()
-            return
-        return await func(*args, **kwargs)
-    return checker
-
-
-def is_admin(admin_list, user_id: int | str) -> bool:
+def is_chat_admin(admin_list, user_id: tp.Union[str, int]) -> bool:
     # admin_list = await bot.get_chat_administrators(msg.chat.id)
     """
         Проверяет, является ли пользователь администратором чата.
@@ -194,7 +183,7 @@ def add_notes(table_id: int, start_note_id: int, count: int, time_range: int, ho
         base.Insert.note_into_table(note_id, table_id)
 
 
-def get_info_table(table_id: int | str, debug: bool = False) -> str:
+def get_info_table(table_id: tp.Union[int, str], debug: bool = False) -> str:
     """
         Возвращает информацию о заметках в таблице.
 
@@ -220,3 +209,32 @@ def get_info_table(table_id: int | str, debug: bool = False) -> str:
                 info += f' (id: {note_content.student_id})'
             info += '\n'
     return info
+
+
+async def admission_conditions(msg: tp.Union[Message, CallbackQuery] = None, is_reg: bool = False,
+                               is_chat: bool = False,
+                               is_admin: bool = False,
+                               is_creator: bool = False) -> bool:
+    call: CallbackQuery
+    if is_reg:
+        if not base.Registration.is_registered(msg.from_user.id):
+            bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+            await bot.send_message(msg.from_user.id, 'Сначала пройдите регистрацию!')
+            await bot.session.close()
+            return False
+    if is_chat:
+        if msg.chat.type == 'private':
+            await msg.reply('Эту команду нельзя использовать в личных сообщениях!')
+            return False
+    if is_admin:
+        bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+        if not is_chat_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
+            await msg.reply('Вы не являетесь администратором!')
+            await bot.session.close()
+            return False
+        await bot.session.close()
+    if is_creator:
+        if not is_bot_creator(msg.from_user.id):
+            await msg.reply('Вы не являетесь создателем бота!')
+            return False
+    return True

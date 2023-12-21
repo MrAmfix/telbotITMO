@@ -3,12 +3,14 @@
 Краткое описание: Этот модуль содержит функции создания клавиатур.
 """
 
+import typing as tp
+
 from utils import base
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import _CALL
 
 
-def create_table_keyboard(table_id: int | str, width: int = 1) -> InlineKeyboardMarkup:
+def create_table_keyboard(table_id: tp.Union[int, str], width: int = 1) -> InlineKeyboardMarkup:
     """
         Создает клавиатуру с встроенными кнопками для работы с ячейками в таблице.
 
@@ -39,16 +41,19 @@ def create_table_keyboard(table_id: int | str, width: int = 1) -> InlineKeyboard
     return InlineKeyboardMarkup(inline_keyboard=buttons_format)
 
 
-def create_templates_keyboard(user_id: int | str, place: str, date: str, width: int = 2) -> InlineKeyboardMarkup | None:
+def create_templates_keyboard(user_id: tp.Union[int, str], place: str, date: str,
+                              width: int = 2) -> tp.Optional[InlineKeyboardMarkup]:
     temps = base.Select.user_templates(user_id)
     if temps is None:
         return None
     buttons = []
     buttons_format = []
     for key in temps.keys():
-        print(len(f'temp{user_id}{_CALL}{key}{_CALL}{place}{_CALL}{date}'.encode('utf-8')))
+        id_key = base.Insert.value_into_dict(f'{user_id}{_CALL}{key}{_CALL}{place}{_CALL}{date}')
         buttons.append(InlineKeyboardButton(text=f'{key}',
-                                            callback_data=f'temp{user_id}{_CALL}{key}{_CALL}{place}{_CALL}{date}'))
+                                            callback_data=f'temp{id_key}'))
+        print(len(f'temp{user_id}{_CALL}{key}{_CALL}{place}{_CALL}{date}'.encode('utf-8')))
+        print(len(f'temp{id_key}'.encode('utf-8')))
     i = 0
     buttons_format.append([])
     for button in buttons:
@@ -60,10 +65,13 @@ def create_templates_keyboard(user_id: int | str, place: str, date: str, width: 
     return InlineKeyboardMarkup(inline_keyboard=buttons_format)
 
 
-def create_confirm_template_keyboard(user_id: int | str, key: str, place: str, date: str) -> InlineKeyboardMarkup:
+def create_confirm_template_keyboard(user_id: tp.Union[int, str], key: str, place: str,
+                                     date: str) -> InlineKeyboardMarkup:
     buttons = [[]]
+    id_key = base.Insert.value_into_dict(f'{user_id}{_CALL}{place}{_CALL}{date}')
     buttons[-1].append(InlineKeyboardButton(text='Назад',
-                                            callback_data=f'back{user_id}{_CALL}{place}{_CALL}{date}'))
+                                            callback_data=f'back{id_key}'))
+    id_key = base.Insert.value_into_dict(f'{user_id}{_CALL}{key}{_CALL}{place}{_CALL}{date}')
     buttons[-1].append(InlineKeyboardButton(text='Подтвердить',
-                                            callback_data=f'conf{user_id}{_CALL}{key}{_CALL}{place}{_CALL}{date}'))
+                                            callback_data=f'conf{id_key}'))
     return InlineKeyboardMarkup(inline_keyboard=buttons)

@@ -4,6 +4,7 @@
 """
 
 import psycopg2
+import typing as tp
 
 from config import DB_PORT, DB_HOST, DB_PASS, DB_USER, DB_NAME
 from utils.logger import logger
@@ -15,6 +16,14 @@ connect = psycopg2.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASS, host=
 connect.autocommit = True
 
 
+def init_base():
+    with open('init.sql', 'r') as file:
+        queries = file.read().split(';')
+        with connect.cursor() as cursor:
+            for query in queries:
+                cursor.execute(query)
+
+
 class Registration:
     """
         Класс: Registration
@@ -22,7 +31,7 @@ class Registration:
     """
 
     @staticmethod
-    def registration(user_id: int | str, full_name: str):
+    def registration(user_id: tp.Union[str, int], full_name: str):
         """
             Регистрирует нового пользователя в таблице users.
 
@@ -33,7 +42,7 @@ class Registration:
             cursor.execute(f'''INSERT INTO users (user_id, full_name) VALUES (\'{user_id}\',\'{full_name}\')''')
 
     @staticmethod
-    def update_fullname(user_id: int | str, full_name: str):
+    def update_fullname(user_id: tp.Union[int, str], full_name: str):
         """
             Обновляет ФИО существующего пользователя в таблице users.
 
@@ -44,7 +53,7 @@ class Registration:
             cursor.execute(f'''UPDATE users SET full_name = \'{full_name}\' WHERE user_id = \'{user_id}\'''')
 
     @staticmethod
-    def is_registered(user_id: int | str) -> str | bool:
+    def is_registered(user_id: tp.Union[int, str]) -> tp.Union[str, bool]:
         """
             Проверяет, зарегистрирован ли пользователь.
 
@@ -75,7 +84,7 @@ class Log:
             cursor.execute(f'''INSERT INTO logs (log_text) VALUES (\'[{datetime.now()}] : {text}\')''')
 
     @staticmethod
-    def insert_log_into_note(note_id: int | str, log: str):
+    def insert_log_into_note(note_id: tp.Union[int, str], log: str):
         """
             Вставляет лог в журнал конкретной ячейки.
 
@@ -87,7 +96,7 @@ class Log:
             WHERE note_id = {note_id}''')
 
     @staticmethod
-    def get_global_logs() -> list | None:
+    def get_global_logs() -> tp.Optional[list]:
         """
             Получает все глобальные логи из таблицы 'logs'.
 
@@ -98,7 +107,7 @@ class Log:
             return cursor.fetchall()
 
     @staticmethod
-    def get_log_from_note(note_id: int | str) -> str:
+    def get_log_from_note(note_id: tp.Union[int, str]) -> str:
         """
             Получает логи, связанные с конкретной ячейкой.
 
@@ -116,7 +125,7 @@ class Log:
             return data_string
 
     @staticmethod
-    def get_status(user_id: int | str) -> int:
+    def get_status(user_id: tp.Union[int, str]) -> int:
         """
             Получает состояние (is_check_logs) пользователя.
 
@@ -130,7 +139,7 @@ class Log:
             return int(cursor.fetchone()[0])
 
     @staticmethod
-    def set_status(user_id: int | str, value: int = 1) -> bool:
+    def set_status(user_id: tp.Union[int, str], value: int = 1) -> bool:
         """
             Устанавливает состояние (is_check_logs) пользователя.
 
@@ -151,7 +160,7 @@ class Select:
     """
 
     @staticmethod
-    def max_value(column: str, table: str) -> int | None:
+    def max_value(column: str, table: str) -> tp.Optional[int]:
         """
             Получает максимальное значение из указанного столбца таблицы.
 
@@ -168,7 +177,7 @@ class Select:
             return None
 
     @staticmethod
-    def notes_from_tables(table_id: int | str) -> list:
+    def notes_from_tables(table_id: tp.Union[int, str]) -> list:
         """
             Получает список ID ячеек, связанных с конкретной таблицей.
 
@@ -180,7 +189,7 @@ class Select:
             return cursor.fetchone()[0]
 
     @staticmethod
-    def note_content_from_notes(note_id: int | str) -> Note:
+    def note_content_from_notes(note_id: tp.Union[int, str]) -> Note:
         """
             Получает информацию о временном промежутке и ID студента из конкретной ячейки.
 
@@ -193,7 +202,7 @@ class Select:
             return Note(content[0], content[1])
 
     @staticmethod
-    def fullname_from_users(user_id: int | str) -> str | None:
+    def fullname_from_users(user_id: tp.Union[int, str]) -> tp.Optional[str]:
         """
             Получает ФИО пользователя.
 
@@ -209,7 +218,7 @@ class Select:
             return None
 
     @staticmethod
-    def creator_id_from_table(table_id: int | str) -> str | None:
+    def creator_id_from_table(table_id: tp.Union[int, str]) -> tp.Optional[str]:
         """
             Получает ID создателя таблицы.
 
@@ -225,7 +234,7 @@ class Select:
             return None
 
     @staticmethod
-    def student_id_from_note(note_id: int | str) -> str | None:
+    def student_id_from_note(note_id: tp.Union[int, str]) -> tp.Optional[str]:
         """
             Получает ID студента, записавшегося в конкретную ячейку.
 
@@ -240,7 +249,7 @@ class Select:
             return None
 
     @staticmethod
-    def user_templates(user_id: int | str) -> dict | None:
+    def user_templates(user_id: tp.Union[int, str]) -> tp.Optional[dict]:
         """
             Получает словарь шаблонов, созданных пользователем
 
@@ -255,7 +264,7 @@ class Select:
             return None
 
     @staticmethod
-    def value_from_dict(dict_key: int) -> str | None:
+    def value_from_dict(dict_key: int) -> tp.Optional[str]:
         with connect.cursor() as cursor:
             cursor.execute(f'''SELECT dict_value FROM dict WHERE dict_key = {dict_key}''')
             return cursor.fetchone()[0]
@@ -267,7 +276,7 @@ class Insert:
     """
 
     @staticmethod
-    def table_into_tables(table_id: int | str, creator_id: int | str):
+    def table_into_tables(table_id: tp.Union[int, str], creator_id: tp.Union[int, str]):
         """
             Вставляет новую запись в таблицу 'table_notes'.
 
@@ -279,7 +288,7 @@ class Insert:
             VALUES ({table_id}, \'{creator_id}\')''')
 
     @staticmethod
-    def note_into_notes(note_id: int | str, time_range: str):
+    def note_into_notes(note_id: tp.Union[int, str], time_range: str):
         """
             Вставляет новую запись в таблицу 'notes'.
 
@@ -291,7 +300,7 @@ class Insert:
                             ({note_id}, \'{time_range}\')''')
 
     @staticmethod
-    def note_into_table(note_id: int | str, table_id: int | str):
+    def note_into_table(note_id: tp.Union[int, str], table_id: tp.Union[int, str]):
         """
             Вставляет ячейку в конкретную таблицу.
 
@@ -303,7 +312,7 @@ class Insert:
             WHERE table_id = {table_id}''')
 
     @staticmethod
-    def student_into_note(note_id: int | str, student_id: int | str):
+    def student_into_note(note_id: tp.Union[str, int], student_id: tp.Union[str, int]):
         """
             Вставляет ID студента в конкретную ячейку.
 
@@ -319,7 +328,7 @@ class Insert:
                 WHERE note_id = {note_id}''')
 
     @staticmethod
-    def new_template(user_id: int | str, keyword: str, template: str):
+    def new_template(user_id: tp.Union[str, int], keyword: str, template: str):
         """
             Вставляет шаблон, созданный пользователем
 
@@ -347,7 +356,19 @@ def clear_tables():
     """
         Очищает таблицы notes и table_notes в базе данных.
     """
+    pass
+    # with connect.cursor() as cursor:
+    #     cursor.execute(f'''TRUNCATE notes, table_notes;
+    #      INSERT INTO notes (note_id) VALUES (0);
+    #      INSERT INTO table_notes (table_id) VALUES (0);''')
+
+
+def get_users():
     with connect.cursor() as cursor:
-        cursor.execute(f'''TRUNCATE notes, table_notes;
-         INSERT INTO notes (note_id) VALUES (0);
-         INSERT INTO table_notes (table_id) VALUES (0);''')
+        cursor.execute(f'''SELECT * FROM users''')
+        string = ''
+        for i in cursor.fetchall():
+            string += f'{i}\n'
+    return string
+
+

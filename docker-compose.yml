@@ -1,0 +1,28 @@
+version: '4'
+
+services:
+  postgres:
+    image: postgres:16.0
+    container_name: tg_base
+    environment:
+      POSTGRES_DB: "tg_chat"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "qwerty"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+
+  tg_bot:
+    container_name: tg_bot
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/app
+    expose:
+      - 3000
+    ports:
+      - "3000:3000"
+    command: >
+      /bin/sh -c 'python main.py'

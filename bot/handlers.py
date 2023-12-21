@@ -13,9 +13,9 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.filters import Command, StateFilter
-from config import BOT_TOKEN
+from config import BOT_TOKEN, _CALL
 from utils.states import States
-from utils.utils import Datas, with_registration
+from utils.utils import Datas
 
 
 bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
@@ -78,21 +78,19 @@ async def handler_send_logs(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО СОЗДАТЕЛЮ БОТА!
         Отправляет создателю глобальные логи.
     """
-    if utils.is_bot_creator(msg.from_user.id):
-        logs = base.Log.get_global_logs()
-        if len(logs) == 0:
-            await bot.send_message(msg.from_user.id, 'Логов нет')
-        else:
-            with open('../log.txt', 'w', encoding='utf-8') as file:
-                for log in logs:
-                    file.write(str(log[0]) + '\n')
-            with open('../log.txt', 'rb') as file:
-                TeleBot(BOT_TOKEN).send_document(msg.from_user.id, file)
+    if not await utils.admission_conditions(msg, is_creator=True):
+        return
+    logs = base.Log.get_global_logs()
+    if len(logs) == 0:
+        await bot.send_message(msg.from_user.id, 'Логов нет')
     else:
-        await bot.send_message(msg.from_user.id, 'У вас нет прав!')
+        with open('../log.txt', 'w', encoding='utf-8') as file:
+            for log in logs:
+                file.write(str(log[0]) + '\n')
+        with open('../log.txt', 'rb') as file:
+            TeleBot(BOT_TOKEN).send_document(msg.from_user.id, file)
 
 
-@with_registration
 @router.message(Command('logs'))
 async def handler_logs(msg: Message):
     """ Обработчик команды /logs
@@ -100,19 +98,12 @@ async def handler_logs(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО АДМИНИСТРАТОРАМ!
         Отправляет логи ячейки, на которую нажмет пользователь следующей.
     """
-    if msg.chat.type == 'private':
-        await bot.send_message(msg.from_user.id, 'Эту команду нельзя использовать в личных сообщениях!')
+    if not await utils.admission_conditions(msg, is_reg=True, is_admin=True):
         return
-    if utils.is_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
-        if base.Log.set_status(msg.from_user.id):
-            await bot.send_message(msg.from_user.id, 'Следующее нажатие на кнопку выдаст вам лог записей на это время')
-        else:
-            await bot.send_message(msg.from_user.id, 'Для использования этой функции вы должны быть зарегистрированы!')
-    else:
-        await bot.send_message(msg.from_user.id, 'Вы не являетесь администратором чата!')
+    if base.Log.set_status(msg.from_user.id):
+        await bot.send_message(msg.from_user.id, 'Следующее нажатие на кнопку выдаст вам лог записей на это время')
 
 
-@with_registration
 @router.message(Command('ml', 'make_list'))
 async def pre_handler_ml(msg: Message):
     """ Предварительный обработчик команды /ml
@@ -120,7 +111,9 @@ async def pre_handler_ml(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО АДМИНИСТРАТОРАМ!
         Распознает есть ли в команде флаги и форматирует текст команды для передачи ее в основной обработчик.
     """
-    if re.fullmatch(r'/(ml|make_list)\s*', msg.text):
+    if not await utils.admission_conditions(msg, is_reg=True, is_admin=True, is_chat=True):
+        return
+    if len(msg.text.split()) == 1:
         await msg.reply('Не указаны данные!')
         return
     if msg.text.split()[1][0] == '-':
@@ -141,12 +134,6 @@ async def handler_ml(msg: Message, text: str, edit_id: int = None, edit_mode: bo
         uid = edit_id
     else:
         uid = msg.from_user.id
-    if msg.chat.type == 'private':
-        await msg.reply('Я не делаю таблицы в личных сообщениях')
-        return
-    if not utils.is_admin(await bot.get_chat_administrators(msg.chat.id), uid):
-        await msg.reply('У вас нет прав!')
-        return
     datas = list(map(lambda x: x.strip(), text[len(text.split()[0]) + 1:].split(',')))
     if len(datas) != 5:
         await msg.reply('Неправильный формат данных!')
@@ -175,11 +162,10 @@ async def pre_handler_add(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО СОЗДАТЕЛЮ ТАБЛИЦЫ!
         Распознает есть ли в команде флаги и форматирует текст команды для передачи ее в основной обработчик.
     """
-    if re.fullmatch(r'/add\s*', msg.text):
-        await msg.reply('Не указаны данные!')
+    if not await utils.admission_conditions(msg, is_reg=True, is_chat=True):
         return
-    if msg.chat.type == 'private':
-        await msg.reply('Эта команда не доступна в личных сообщениях')
+    if len(msg.text.split()) == 1:
+        await msg.reply('Не указаны данные!')
         return
     elif msg.reply_to_message is None:
         await msg.reply('Вы не переслали сообщение!')
@@ -188,7 +174,10 @@ async def pre_handler_add(msg: Message):
         await msg.reply('Это сообщение не содержит таблицы!')
         return
     else:
-        table_id = msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(',')[1]
+        if msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[:4] not in ['add_', 'del_']:
+            await msg.reply('Это не таблица!')
+            return
+        table_id = msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(_CALL)[1]
         if not int(base.Select.creator_id_from_table(table_id)) == msg.from_user.id:
             await msg.reply('Вы не являетесь создателем этой таблицы!')
             return
@@ -216,7 +205,7 @@ async def handler_add(msg: Message, text: str):
     if cd is not None:
         await msg.reply(cd)
         return
-    table_id = msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(',')[1]
+    table_id = msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(_CALL)[1]
     note_id = base.Select.max_value('note_id', 'notes') + 1
     note_old_max = max(list(map(lambda x: int(x), base.Select.notes_from_tables(table_id))))
     time_range = base.Select.note_content_from_notes(note_old_max).time_range[8:]
@@ -239,18 +228,18 @@ async def handler_replace(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО АДМИНИСТРАТОРАМ!
         Заменяет место проведения в пересланной таблице.
     """
-    if msg.chat.type == 'private':
-        await msg.reply('Эта команда не доступна в личных сообщениях')
+    if not await utils.admission_conditions(msg, is_admin=True, is_chat=True):
         return
-    if not utils.is_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
-        await msg.reply('У вас недостаточно прав!')
     elif msg.reply_to_message is None:
         await msg.reply('Вы не переслали сообщение!')
     elif msg.reply_to_message.reply_markup is None:
         await msg.reply('Это сообщение не содержит таблицы!')
+    elif msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[:4] not in ['add_', 'del_']:
+        await msg.reply('Это не таблица!')
+        return
     else:
         try:
-            await bot.edit_message_text(msg.text[9:] + '\n' + msg.reply_to_message.text.split('\n')[-1],
+            await bot.edit_message_text(msg.text[9:].strip() + '\n' + msg.reply_to_message.text.split('\n')[-1],
                                         msg.reply_to_message.chat.id, msg.reply_to_message.message_id,
                                         reply_markup=msg.reply_to_message.reply_markup)
         except aiogram.exceptions.TelegramBadRequest as _ex:
@@ -268,14 +257,13 @@ async def handler_info(msg: Message):
     elif msg.reply_to_message.reply_markup is None:
         await msg.reply('Это сообщение не содержит таблицы!')
     else:
-        table_id = msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(',')[1]
-        if msg.text == '/info 1' and utils.is_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
+        table_id = msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(_CALL)[1]
+        if msg.text == '/info 1' and await utils.admission_conditions(msg, is_admin=True):
             await bot.send_message(msg.from_user.id, utils.get_info_table(table_id, True))
         else:
             await bot.send_message(msg.from_user.id, utils.get_info_table(table_id))
 
 
-@with_registration
 @router.message(Command('ct', 'create_temp'))
 async def handler_new_template(msg: Message, state: FSMContext):
     """ Обработчик команды /new_template
@@ -284,7 +272,9 @@ async def handler_new_template(msg: Message, state: FSMContext):
         /create_temp <flag~> <time_start>,<count / all_time>,<time_range>
         /ct <~flag> <time_start>,<count / all_time>,<time_range>
     """
-    if re.fullmatch(r'/(create_temp|ct)\s*', msg.text):
+    if not await utils.admission_conditions(msg, is_reg=True):
+        return
+    if len(msg.text.split()) == 1:
         await msg.reply('Не указаны данные!')
         return
     if msg.text.split()[1][0] == '-':
@@ -319,18 +309,13 @@ async def handler_wait_keyword(msg: Message, state: FSMContext):
     await state.set_state()
 
 
-@with_registration
 @router.message(Command('ml_temp', 'mlt'))
 async def handler_make_list_from_template(msg: Message):
     # /ml_temp <place>,<date>
-    if re.fullmatch(r'/(ml_temp|mlt)\s*', msg.text):
+    if not await utils.admission_conditions(msg, is_reg=True, is_admin=True, is_chat=True):
+        return
+    if len(msg.text.split()) == 1:
         await msg.reply('Не указаны данные!')
-        return
-    if msg.chat.type == 'private':
-        await msg.reply('Я не делаю таблицы в личных сообщениях')
-        return
-    if not utils.is_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
-        await msg.reply('У вас нет прав!')
         return
     datas = list(map(lambda x: x.strip(), msg.text[len(msg.text.split()[0]) + 1:].split(',')))
     if len(datas) != 2:
@@ -353,8 +338,15 @@ async def handler_clear_tables(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО СОЗДАТЕЛЮ БОТА!
         Очищает таблицы notes и table_notes.
     """
-    if not utils.is_bot_creator(msg.from_user.id):
-        await bot.send_message(msg.from_user.id, 'У вас нет доступа!')
+    if not await utils.admission_conditions(msg, is_creator=True):
+        return
     else:
         base.clear_tables()
         await bot.send_message(msg.from_user.id, 'Выполнено!')
+
+
+@router.message(Command('test'))
+async def test(msg: Message):
+    if not await utils.admission_conditions(is_admin=True):
+        return
+    await msg.reply(base.get_users())
