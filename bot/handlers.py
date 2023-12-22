@@ -98,7 +98,7 @@ async def handler_logs(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО АДМИНИСТРАТОРАМ!
         Отправляет логи ячейки, на которую нажмет пользователь следующей.
     """
-    if not await utils.admission_conditions(msg, is_reg=True, is_admin=True):
+    if not await utils.admission_conditions(msg, is_reg=True):
         return
     if base.Log.set_status(msg.from_user.id):
         await bot.send_message(msg.from_user.id, 'Следующее нажатие на кнопку выдаст вам лог записей на это время')
@@ -111,7 +111,7 @@ async def pre_handler_ml(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО АДМИНИСТРАТОРАМ!
         Распознает есть ли в команде флаги и форматирует текст команды для передачи ее в основной обработчик.
     """
-    if not await utils.admission_conditions(msg, is_reg=True, is_admin=True, is_chat=True):
+    if not await utils.admission_conditions(msg, is_reg=True, is_chat=True):
         return
     if len(msg.text.split()) == 1:
         await msg.reply('Не указаны данные!')
@@ -201,6 +201,10 @@ async def handler_add(msg: Message, text: str):
         await msg.reply('Неправильный формат!')
         return
     dataf = Datas(time_start=datas[0], count=datas[1], time_range=datas[2])
+    if len(msg.reply_to_message.reply_markup.inline_keyboard) * len(
+            msg.reply_to_message.reply_markup.inline_keyboard[0]) + dataf.count > 60:
+        await msg.reply('Не стоит делать такие большие таблицы (Ограничение: 60)!')
+        return
     cd = utils.Formats.check_all('01.01.2024', dataf.time_start, dataf.count, dataf.time_range)
     if cd is not None:
         await msg.reply(cd)
@@ -228,7 +232,7 @@ async def handler_replace(msg: Message):
         КОМАНДА ДОСТУПНА ТОЛЬКО АДМИНИСТРАТОРАМ!
         Заменяет место проведения в пересланной таблице.
     """
-    if not await utils.admission_conditions(msg, is_admin=True, is_chat=True):
+    if not await utils.admission_conditions(msg, is_chat=True):
         return
     elif msg.reply_to_message is None:
         await msg.reply('Вы не переслали сообщение!')
@@ -256,9 +260,12 @@ async def handler_info(msg: Message):
         await msg.reply('Вы не переслали сообщение!')
     elif msg.reply_to_message.reply_markup is None:
         await msg.reply('Это сообщение не содержит таблицы!')
+    elif msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[:4] not in ['add_', 'del_']:
+        await msg.reply('Это не таблица!')
+        return
     else:
         table_id = msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(_CALL)[1]
-        if msg.text == '/info 1' and await utils.admission_conditions(msg, is_admin=True):
+        if msg.text == '/info 1' and await utils.admission_conditions(msg, is_chat=True):
             await bot.send_message(msg.from_user.id, utils.get_info_table(table_id, True))
         else:
             await bot.send_message(msg.from_user.id, utils.get_info_table(table_id))
@@ -312,7 +319,7 @@ async def handler_wait_keyword(msg: Message, state: FSMContext):
 @router.message(Command('ml_temp', 'mlt'))
 async def handler_make_list_from_template(msg: Message):
     # /ml_temp <place>,<date>
-    if not await utils.admission_conditions(msg, is_reg=True, is_admin=True, is_chat=True):
+    if not await utils.admission_conditions(msg, is_reg=True, is_chat=True):
         return
     if len(msg.text.split()) == 1:
         await msg.reply('Не указаны данные!')
@@ -347,6 +354,6 @@ async def handler_clear_tables(msg: Message):
 
 @router.message(Command('test'))
 async def test(msg: Message):
-    if not await utils.admission_conditions(is_admin=True):
+    if not await utils.admission_conditions(is_creator=True):
         return
     await msg.reply(base.get_users())

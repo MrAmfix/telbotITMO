@@ -6,4 +6,4 @@ def init_base():
 
 
 if __name__ == '__main__':
-    init_base()
+    pass

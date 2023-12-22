@@ -25,8 +25,7 @@ async def call(callback: CallbackQuery):
     """
     if not await utils.admission_conditions(callback, is_reg=True):
         return
-    if base.Log.get_status(callback.from_user.id) == 1 and \
-            utils.is_chat_admin(await bot.get_chat_administrators(callback.message.chat.id), callback.from_user.id):
+    if base.Log.get_status(callback.from_user.id) == 1 and utils.admission_conditions(is_admin=True, is_reg=True):
         base.Log.set_status(callback.from_user.id, 0)
         content = base.Log.get_log_from_note(callback.data[4:].split(_CALL)[0])
         if content == "":
