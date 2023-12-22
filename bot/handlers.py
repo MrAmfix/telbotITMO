@@ -202,7 +202,7 @@ async def handler_add(msg: Message, text: str):
         return
     dataf = Datas(time_start=datas[0], count=datas[1], time_range=datas[2])
     if len(msg.reply_to_message.reply_markup.inline_keyboard) * len(
-            msg.reply_to_message.reply_markup.inline_keyboard[0]) + dataf.count > 60:
+            msg.reply_to_message.reply_markup.inline_keyboard[0]) + int(dataf.count) > 60:
         await msg.reply('Не стоит делать такие большие таблицы (Ограничение: 60)!')
         return
     cd = utils.Formats.check_all('01.01.2024', dataf.time_start, dataf.count, dataf.time_range)
