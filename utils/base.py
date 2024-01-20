@@ -8,7 +8,7 @@ import typing as tp
 
 from config import DB_PORT, DB_HOST, DB_PASS, DB_USER, DB_NAME
 from utils.logger import logger
-from utils.utils import Note
+from utils.utils import CNote
 from datetime import datetime
 
 
@@ -68,7 +68,7 @@ class Registration:
             return False
 
 
-class Log:
+class Logger:
     """ Класс: Log
         Краткое описание: Предоставляет методы для вставки и получения логов ячеек / общих логов.
     """
@@ -189,7 +189,7 @@ class Select:
             return cursor.fetchone()[0]
 
     @staticmethod
-    def note_content_from_notes(note_id: tp.Union[int, str]) -> Note:
+    def note_content_from_notes(note_id: tp.Union[int, str]) -> CNote:
         """
             Получает информацию о временном промежутке и ID студента из конкретной ячейки.
 
@@ -199,7 +199,7 @@ class Select:
         with connect.cursor() as cursor:
             cursor.execute(f'''SELECT time_range, student_id FROM notes WHERE note_id = {note_id}''')
             content = list(cursor.fetchone())
-            return Note(content[0], content[1])
+            return CNote(content[0], content[1])
 
     @staticmethod
     def fullname_from_users(user_id: tp.Union[int, str]) -> tp.Optional[str]:

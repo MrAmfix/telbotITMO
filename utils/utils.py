@@ -16,7 +16,7 @@ from datetime import datetime
 from math import ceil
 
 
-class Note:
+class CNote:
     """
         Класс для удобного хранения информации о ячейке.
 

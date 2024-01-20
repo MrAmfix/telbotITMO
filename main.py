@@ -16,7 +16,7 @@ async def main():
     """
         Функция запуска бота
     """
-    init_base()
+    # init_base()
     logger.info('Bot started!')
     dp = Dispatcher()
     dp.include_routers(router, router_callback)

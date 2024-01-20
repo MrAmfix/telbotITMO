@@ -38,11 +38,11 @@ async def handler_reg(msg: Message):
     if re.fullmatch(r'/reg\s[a-zA-Zа-яА-Я]+\s+[a-zA-Zа-яА-Я]+\s*[a-zA-Zа-яА-Я]*', msg.text):
         is_reg = base.Registration.is_registered(msg.from_user.id)
         if is_reg:
-            base.Log.logging(f"[RENAME]: user {msg.from_user.id} changed name ({is_reg}) --> ({msg.text[5:]})")
+            base.Logger.logging(f"[RENAME]: user {msg.from_user.id} changed name ({is_reg}) --> ({msg.text[5:]})")
             base.Registration.update_fullname(msg.from_user.id, msg.text[5:])
             await bot.send_message(msg.from_user.id, 'Вы успешно изменили ФИО!')
         else:
-            base.Log.logging(f"[REGISTRATION]: user {msg.from_user.id} registered as ({msg.text[5:]})")
+            base.Logger.logging(f"[REGISTRATION]: user {msg.from_user.id} registered as ({msg.text[5:]})")
             base.Registration.registration(msg.from_user.id, msg.text[5:])
             await bot.send_message(msg.from_user.id, 'Вы успешно зарегистрировались!')
     else:
@@ -80,7 +80,7 @@ async def handler_send_logs(msg: Message):
     """
     if not await utils.admission_conditions(msg, is_creator=True):
         return
-    logs = base.Log.get_global_logs()
+    logs = base.Logger.get_global_logs()
     if len(logs) == 0:
         await bot.send_message(msg.from_user.id, 'Логов нет')
     else:
@@ -100,7 +100,7 @@ async def handler_logs(msg: Message):
     """
     if not await utils.admission_conditions(msg, is_reg=True):
         return
-    if base.Log.set_status(msg.from_user.id):
+    if base.Logger.set_status(msg.from_user.id):
         await bot.send_message(msg.from_user.id, 'Следующее нажатие на кнопку выдаст вам лог записей на это время')
 
 

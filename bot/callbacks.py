@@ -25,9 +25,9 @@ async def call(callback: CallbackQuery):
     """
     if not await utils.admission_conditions(callback, is_reg=True):
         return
-    if base.Log.get_status(callback.from_user.id) == 1 and utils.admission_conditions(is_admin=True, is_reg=True):
-        base.Log.set_status(callback.from_user.id, 0)
-        content = base.Log.get_log_from_note(callback.data[4:].split(_CALL)[0])
+    if base.Logger.get_status(callback.from_user.id) == 1 and utils.admission_conditions(is_admin=True, is_reg=True):
+        base.Logger.set_status(callback.from_user.id, 0)
+        content = base.Logger.get_log_from_note(callback.data[4:].split(_CALL)[0])
         if content == "":
             await bot.send_message(callback.from_user.id, 'Логов нет!')
         else:
@@ -41,7 +41,7 @@ async def call(callback: CallbackQuery):
         table_id = callback.data[4:].split(_CALL)[1]
         base.Insert.student_into_note(note_id, callback.from_user.id)
         keyboard = keyboards.create_table_keyboard(table_id, 2)
-        base.Log.insert_log_into_note(note_id, f'[{datetime.now()}] : '
+        base.Logger.insert_log_into_note(note_id, f'[{datetime.now()}] : '
                                                f'[SUCCESSFUL ADD]: user {callback.from_user.id} added')
         await bot.edit_message_text(f'{callback.message.text}', callback.message.chat.id,
                                     callback.message.message_id, reply_markup=keyboard)
@@ -57,14 +57,14 @@ async def call(callback: CallbackQuery):
         if utils.is_chat_admin(await bot.get_chat_administrators(msg.chat.id), callback.from_user.id):
             base.Insert.student_into_note(note_id, 'null')
             keyboard = keyboards.create_table_keyboard(table_id, 2)
-            base.Log.insert_log_into_note(note_id, f'[{datetime.now()}] : [SUCCESSFUL DEL]: user {student_id} '
+            base.Logger.insert_log_into_note(note_id, f'[{datetime.now()}] : [SUCCESSFUL DEL]: user {student_id} '
                                                    f'was deleted by admin {callback.from_user.id}')
             await bot.edit_message_text(f'{callback.message.text}', callback.message.chat.id,
                                         callback.message.message_id, reply_markup=keyboard)
         elif str(student_id) == str(callback.from_user.id):
             base.Insert.student_into_note(note_id, 'null')
             keyboard = keyboards.create_table_keyboard(table_id, 2)
-            base.Log.insert_log_into_note(note_id, f'[{datetime.now()}] : [SUCCESSFUL DEL]: user {student_id}'
+            base.Logger.insert_log_into_note(note_id, f'[{datetime.now()}] : [SUCCESSFUL DEL]: user {student_id}'
                                                    f'delete itself')
             await bot.edit_message_text(f'{callback.message.text}', callback.message.chat.id,
                                         callback.message.message_id, reply_markup=keyboard)
