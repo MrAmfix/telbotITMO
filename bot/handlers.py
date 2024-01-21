@@ -7,6 +7,7 @@ import aiogram.exceptions
 import re
 
 from aiogram import Router, Bot
+
 from utils import keyboards, utils, base
 from telebot import TeleBot
 from aiogram.types import Message
@@ -143,11 +144,9 @@ async def handler_ml(msg: Message, text: str, edit_id: int = None, edit_mode: bo
     if cd is not None:
         await msg.reply(cd)
         return
-    table_id = base.Select.max_value('table_id', 'table_notes') + 1
-    note_id = base.Select.max_value('note_id', 'notes') + 1
-    base.Insert.table_into_tables(table_id, uid)
+    table_id = base.Insert.table_into_tables(uid)
     hours, minutes = int(dataf.time_start[:2]), int(dataf.time_start[3:])
-    utils.add_notes(table_id, note_id, int(dataf.count), int(dataf.time_range), hours, minutes)
+    await utils.add_notes(table_id, int(dataf.count), int(dataf.time_range), hours, minutes)
     if not edit_mode:
         await msg.reply(f'{dataf.place}\n{dataf.date}', reply_markup=keyboards.create_table_keyboard(table_id, 2))
     else:
@@ -210,15 +209,14 @@ async def handler_add(msg: Message, text: str):
         await msg.reply(cd)
         return
     table_id = msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(_CALL)[1]
-    note_id = base.Select.max_value('note_id', 'notes') + 1
     note_old_max = max(list(map(lambda x: int(x), base.Select.notes_from_tables(table_id))))
     time_range = base.Select.note_content_from_notes(note_old_max).time_range[8:]
     if (int(time_range[:2]) * 60 + int(time_range[3:])) > (int(dataf.time_start[:2]) * 60 + int(dataf.time_start[3:])):
         await msg.reply('Временные промежутки пересекаются!')
         return
     else:
-        utils.add_notes(int(table_id), note_id, int(dataf.count), int(dataf.time_range),
-                        int(dataf.time_start[:2]), int(dataf.time_start[3:]))
+        await utils.add_notes(int(table_id), int(dataf.count), int(dataf.time_range),
+                              int(dataf.time_start[:2]), int(dataf.time_start[3:]))
         keyboard = keyboards.create_table_keyboard(table_id, 2)
         await bot.edit_message_text(msg.reply_to_message.text, msg.chat.id,
                                     msg.reply_to_message.message_id, reply_markup=keyboard)
@@ -338,22 +336,7 @@ async def handler_make_list_from_template(msg: Message):
     await msg.reply('Выберите шаблон', reply_markup=keyboard)
 
 
-@router.message(Command('clear_tables'))
-async def handler_clear_tables(msg: Message):
-    """ Обработчик команды /clear_tables
-
-        КОМАНДА ДОСТУПНА ТОЛЬКО СОЗДАТЕЛЮ БОТА!
-        Очищает таблицы notes и table_notes.
-    """
-    if not await utils.admission_conditions(msg, is_creator=True):
-        return
-    else:
-        base.clear_tables()
-        await bot.send_message(msg.from_user.id, 'Выполнено!')
-
-
-@router.message(Command('test'))
-async def test(msg: Message):
-    if not await utils.admission_conditions(is_creator=True):
-        return
-    await msg.reply(base.get_users())
+@router.message(Command('all_notes_id'))
+async def all_notes(msg: Message):
+    a = base.Select.notes_from_tables(msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(_CALL)[1])
+    await msg.reply(str(a))

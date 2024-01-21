@@ -6,12 +6,11 @@ from aiogram.types import CallbackQuery, Message
 from config import BOT_TOKEN
 from utils import base
 from utils.utils import is_chat_admin
-from utils.base import Logger
 
 
 def send_log(func):
     async def logger(msg: Message, *args, **kwargs):
-        Logger.logging(f'User {msg.from_user.username} with id {msg.from_user.id} send message!')
+        base.Logger.logging(f'User {msg.from_user.username} with id {msg.from_user.id} send message!')
         res = await func(msg, *args, **kwargs)
         return res
     return logger

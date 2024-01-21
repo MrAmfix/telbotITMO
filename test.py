@@ -1,9 +1,4 @@
-def init_base():
-    with open('init.sql', 'r') as file:
-        queries = file.read().split(';')
-        for query in queries:
-            print(query)
-
+from utils import base
 
 if __name__ == '__main__':
-    pass
+    print(base.Select.student_id_from_note(1))

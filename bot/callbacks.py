@@ -1,4 +1,3 @@
-
 """ Модуль callbacks.py
 Краткое описание: Этот модуль содержит функции-обработчики нажатий
 """
@@ -8,9 +7,8 @@ from datetime import datetime
 from aiogram import Router
 from aiogram.types import CallbackQuery
 from bot.handlers import handler_ml, bot
-from utils import base, utils, keyboards
+from utils import utils, keyboards, base
 from config import _CALL
-
 
 router_callback = Router()
 
@@ -26,7 +24,7 @@ async def call(callback: CallbackQuery):
     if not await utils.admission_conditions(callback, is_reg=True):
         return
     if base.Logger.get_status(callback.from_user.id) == 1 and utils.admission_conditions(is_admin=True, is_reg=True):
-        base.Logger.set_status(callback.from_user.id, 0)
+        base.Logger.set_status(user_id=callback.from_user.id, value=0)
         content = base.Logger.get_log_from_note(callback.data[4:].split(_CALL)[0])
         if content == "":
             await bot.send_message(callback.from_user.id, 'Логов нет!')
@@ -42,7 +40,7 @@ async def call(callback: CallbackQuery):
         base.Insert.student_into_note(note_id, callback.from_user.id)
         keyboard = keyboards.create_table_keyboard(table_id, 2)
         base.Logger.insert_log_into_note(note_id, f'[{datetime.now()}] : '
-                                               f'[SUCCESSFUL ADD]: user {callback.from_user.id} added')
+                                                  f'[SUCCESSFUL ADD]: user {callback.from_user.id} added')
         await bot.edit_message_text(f'{callback.message.text}', callback.message.chat.id,
                                     callback.message.message_id, reply_markup=keyboard)
         pass
@@ -55,17 +53,17 @@ async def call(callback: CallbackQuery):
             return
         msg = callback.message
         if utils.is_chat_admin(await bot.get_chat_administrators(msg.chat.id), callback.from_user.id):
-            base.Insert.student_into_note(note_id, 'null')
+            base.Insert.student_into_note(note_id, None)
             keyboard = keyboards.create_table_keyboard(table_id, 2)
             base.Logger.insert_log_into_note(note_id, f'[{datetime.now()}] : [SUCCESSFUL DEL]: user {student_id} '
-                                                   f'was deleted by admin {callback.from_user.id}')
+                                                      f'was deleted by admin {callback.from_user.id}')
             await bot.edit_message_text(f'{callback.message.text}', callback.message.chat.id,
                                         callback.message.message_id, reply_markup=keyboard)
         elif str(student_id) == str(callback.from_user.id):
-            base.Insert.student_into_note(note_id, 'null')
+            base.Insert.student_into_note(note_id, None)
             keyboard = keyboards.create_table_keyboard(table_id, 2)
             base.Logger.insert_log_into_note(note_id, f'[{datetime.now()}] : [SUCCESSFUL DEL]: user {student_id}'
-                                                   f'delete itself')
+                                                      f'delete itself')
             await bot.edit_message_text(f'{callback.message.text}', callback.message.chat.id,
                                         callback.message.message_id, reply_markup=keyboard)
         else:

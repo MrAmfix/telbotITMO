@@ -40,4 +40,4 @@ class Dict(Base):
 class Log(Base):
     __tablename__ = 'logs'
 
-    log_text = Column(String)
+    log_text = Column(String, primary_key=True)

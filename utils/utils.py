@@ -163,24 +163,23 @@ def flag_handler(msg: str, with_date: bool = True) -> str:
         return 'Некорректный флаг!'
 
 
-def add_notes(table_id: int, start_note_id: int, count: int, time_range: int, hours: int, minutes: int):
+async def add_notes(table_id: int, count: int, time_range: int, hours: int, minutes: int):
     """
     Вставляет ячейки с временными промежутками в таблицу table_notes.
 
     :param table_id: ID таблицы, куда нужно вставить ячейки.
-    :param start_note_id: ID начальной ячейки.
     :param count: Количество ячеек.
     :param time_range: Временной промежуток.
     :param hours: Часы начала.
     :param minutes: Минуты начала.
     """
-    for note_id in range(start_note_id, start_note_id + count):
+    for i in range(count):
         range_time = f"{'{:02}'.format(hours)}:{'{:02}'.format(minutes)} - "
         hours += (minutes + time_range) // 60
         minutes = (minutes + time_range) % 60
         range_time += f"{'{:02}'.format(hours)}:{'{:02}'.format(minutes)}"
-        base.Insert.note_into_notes(note_id, range_time)
-        base.Insert.note_into_table(note_id, table_id)
+        new_note_id = base.Insert.note_into_notes(range_time)
+        base.Insert.note_into_table(new_note_id, table_id)
 
 
 def get_info_table(table_id: tp.Union[int, str], debug: bool = False) -> str:
