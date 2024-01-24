@@ -7,7 +7,7 @@ from datetime import datetime
 from aiogram import Router
 from aiogram.types import CallbackQuery
 from bot.handlers import handler_ml, bot
-from utils import utils, keyboards, base
+from utils import utils, keyboards, base, logger
 from config import _CALL
 
 router_callback = Router()
@@ -48,6 +48,8 @@ async def call(callback: CallbackQuery):
         note_id = callback.data[4:].split(_CALL)[0]
         table_id = callback.data[4:].split(_CALL)[1]
         student_id = base.Select.student_id_from_note(note_id)
+        # HERE IS PROBLEM ???
+        logger.logger.info(f'note_id: {note_id}, table_id: {table_id}, student_id: {student_id}')
         if student_id is None:
             await bot.send_message(callback.message.chat.id, 'ERROR!!!')
             return

@@ -51,7 +51,8 @@ class Logger:
     @staticmethod
     @with_session
     def logging(session: Session, text: str) -> None:
-        session.add(Log(log_text=f'[{datetime.now()}] : {text}'))
+        txt = f'[{datetime.now()}] : {text}'
+        session.add(Log(log_text=txt))
         session.commit()
 
     @staticmethod
@@ -66,7 +67,7 @@ class Logger:
 
     @staticmethod
     @with_session
-    def get_global_logs(session: Session) -> tp.Optional[list]:
+    def get_global_logs(session: Session) -> tp.Optional[tp.List[str]]:
         logs = session.query(Log).all()
         return [str(log.log_text) for log in logs] if logs else []
 
@@ -126,7 +127,7 @@ class Select:
     @staticmethod
     @with_session
     def student_id_from_note(session: Session, note_id: tp.Union[int, str]) -> tp.Optional[str]:
-        uid = session.query(Note.student_id).filter_by(note_id=int(note_id)).first()
+        uid = session.query(Note).filter_by(note_id=int(note_id)).first().student_id
         if uid is not None:
             return str(uid)
         return None

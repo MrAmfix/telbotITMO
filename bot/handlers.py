@@ -87,7 +87,7 @@ async def handler_send_logs(msg: Message):
     else:
         with open('../log.txt', 'w', encoding='utf-8') as file:
             for log in logs:
-                file.write(str(log[0]) + '\n')
+                file.write(str(log) + '\n')
         with open('../log.txt', 'rb') as file:
             TeleBot(BOT_TOKEN).send_document(msg.from_user.id, file)
 
@@ -334,9 +334,3 @@ async def handler_make_list_from_template(msg: Message):
         await msg.reply('У вас нет шаблонов!')
         return
     await msg.reply('Выберите шаблон', reply_markup=keyboard)
-
-
-@router.message(Command('all_notes_id'))
-async def all_notes(msg: Message):
-    a = base.Select.notes_from_tables(msg.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data[4:].split(_CALL)[1])
-    await msg.reply(str(a))
