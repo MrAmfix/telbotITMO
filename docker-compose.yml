@@ -10,6 +10,7 @@ services:
       POSTGRES_PASSWORD: "qwerty"
     ports:
       - "5432:5432"
+    restart: always
 
   tg_bot:
     container_name: tg_bot
@@ -23,4 +24,4 @@ services:
     ports:
       - "3000:3000"
     command: >
-      /bin/sh -c 'python main.py'
+      /bin/sh -c 'pip install sqlalchemy;python main.py'
