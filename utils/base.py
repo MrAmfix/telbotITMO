@@ -142,6 +142,14 @@ class Select:
     def value_from_dict(session: Session, dict_key: int) -> tp.Optional[str]:
         return session.query(Dict).filter_by(dict_key=dict_key).first().dict_value
 
+    @staticmethod
+    @with_session
+    def place_templates(session: Session, user_id: tp.Union[str, int]) -> tp.Optional[tp.List[str]]:
+        pt = session.query(User).filter_by(user_id=str(user_id)).first().place_templates
+        if pt is not None:
+            return [str(place) for place in pt]
+        return None
+
 
 class Insert:
     @staticmethod
@@ -202,3 +210,13 @@ class Insert:
         session.add(new_values)
         session.commit()
         return new_values.dict_key
+
+    @staticmethod
+    @with_session
+    def new_place_template(session: Session, user_id: tp.Union[str, int], place: str):
+        user = session.query(User).filter_by(user_id=str(user_id)).first()
+        if user.place_templates is None:
+            user.place_templates = [place]
+        else:
+            user.place_templates = [*user.place_templates, place]
+        session.commit()

@@ -10,7 +10,7 @@ from aiogram import Router, Bot
 
 from utils import keyboards, utils, base
 from telebot import TeleBot
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.filters import Command, StateFilter
@@ -269,13 +269,13 @@ async def handler_info(msg: Message):
             await bot.send_message(msg.from_user.id, utils.get_info_table(table_id))
 
 
-@router.message(Command('ct', 'create_temp'))
+@router.message(Command('ctt', 'create_table_template'))
 async def handler_new_template(msg: Message, state: FSMContext):
-    """ Обработчик команды /new_template
+    """ Обработчик команды /ctt
 
         Создает шаблон для создания таблицы
-        /create_temp <flag~> <time_start>,<count / all_time>,<time_range>
-        /ct <~flag> <time_start>,<count / all_time>,<time_range>
+        /create_table_template <flag~> <time_start>,<count / all_time>,<time_range>
+        /ctt <~flag> <time_start>,<count / all_time>,<time_range>
     """
     if not await utils.admission_conditions(msg, is_reg=True):
         return
@@ -305,32 +305,66 @@ async def handler_new_template(msg: Message, state: FSMContext):
 
 @router.message(StateFilter(States.wait_keyword))
 async def handler_wait_keyword(msg: Message, state: FSMContext):
-    if msg.text.count(' ') > 0:
-        await msg.reply('Название шаблона не должно содержать пробелы!')
-        return
     get_template = await state.get_data()
     base.Insert.new_template(msg.from_user.id, msg.text, get_template.get('template_text'))
     await msg.reply('Шаблон успешно сохранен!')
     await state.set_state()
 
 
-@router.message(Command('ml_temp', 'mlt'))
-async def handler_make_list_from_template(msg: Message):
-    # /ml_temp <place>,<date>
-    if not await utils.admission_conditions(msg, is_reg=True, is_chat=True):
+@router.message(Command('cpt', 'create_place_template'))
+async def handler_create_place_template(msg: Message):
+    if not await utils.admission_conditions(msg, is_reg=True):
         return
     if len(msg.text.split()) == 1:
         await msg.reply('Не указаны данные!')
         return
-    datas = list(map(lambda x: x.strip(), msg.text[len(msg.text.split()[0]) + 1:].split(',')))
-    if len(datas) != 2:
-        await msg.reply('Неправильный формат данных!')
+    await bot.send_message(msg.from_user.id, f'Успешно добавлен шаблон места: {msg.text.split(maxsplit=1)[1]}')
+    base.Insert.new_place_template(msg.from_user.id, msg.text.split(maxsplit=1)[1])
+
+
+@router.message(Command('mlt', 'ml_temp'))
+async def handler_make_list_from_temp(msg: Message, state: FSMContext):
+    # /mlt <place>,<date>
+    # /mlt
+    if not await utils.admission_conditions(msg, is_reg=True, is_chat=True):
         return
-    if utils.Formats.check_date(datas[1]) is not None:
-        await msg.reply(utils.Formats.check_date(datas[1]))
-        return
-    keyboard = keyboards.create_templates_keyboard(msg.from_user.id, datas[0], datas[1])
-    if keyboard is None:
+    if base.Select.user_templates(msg.from_user.id) is None:
         await msg.reply('У вас нет шаблонов!')
         return
-    await msg.reply('Выберите шаблон', reply_markup=keyboard)
+    if re.fullmatch(r'/(mlt|ml_temp)(@notes_itmo_beta_bot)*\s*', msg.text):
+        # /mlt
+        places = base.Select.place_templates(msg.from_user.id)
+        keyboard = keyboards.create_places_table_keyboard(places)
+        await msg.reply(f'Введите{"" if places is None else " или выберите"} место проведения', reply_markup=keyboard)
+        await state.set_state(States.wait_place)
+    else:
+        # /mlt <place>,<date>
+        datas = [x.strip() for x in msg.text.split(maxsplit=1)[1].split(',')]
+        if len(datas) != 2:
+            await msg.reply('Неправильный формат данных!')
+            return
+        if utils.Formats.check_date(datas[1]) is not None:
+            await msg.reply(utils.Formats.check_date(datas[1]))
+            return
+        keyboard = keyboards.create_templates_keyboard(msg.from_user.id, datas[0], datas[1])
+        await msg.reply('Выберите шаблон', reply_markup=keyboard)
+
+
+@router.message(StateFilter(States.wait_place))
+async def handler_wait_place(msg: Message, state: FSMContext):
+    await msg.reply('Введите или выберите дату проведения', reply_markup=keyboards.create_dates_keyboard())
+    await state.update_data(place=msg.text)
+    await state.set_state(States.wait_date)
+
+
+@router.message(StateFilter(States.wait_date))
+async def handler_wait_date(msg: Message, state: FSMContext):
+    if utils.Formats.check_date(msg.text) is not None:
+        await msg.reply(utils.Formats.check_date(msg.text), reply_markup=ReplyKeyboardRemove())
+        await state.set_state()
+    else:
+        gd = await state.get_data()
+        await state.set_state()
+        await msg.reply('Выберите шаблон', reply_markup=ReplyKeyboardRemove())
+        await msg.reply('ᅠ ᅠ', reply_markup=keyboards.create_templates_keyboard(
+            msg.from_user.id, gd.get('place'), msg.text))

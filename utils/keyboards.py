@@ -6,8 +6,9 @@
 import typing as tp
 
 from utils import base
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from config import _CALL
+from datetime import datetime, timedelta
 
 
 def create_table_keyboard(table_id: tp.Union[int, str], width: int = 1) -> InlineKeyboardMarkup:
@@ -35,8 +36,7 @@ def create_table_keyboard(table_id: tp.Union[int, str], width: int = 1) -> Inlin
     for button in buttons:
         buttons_format[-1].append(button)
         i += 1
-        if i == width:
-            i = 0
+        if i % width == 0:
             buttons_format.append([])
     return InlineKeyboardMarkup(inline_keyboard=buttons_format)
 
@@ -59,8 +59,7 @@ def create_templates_keyboard(user_id: tp.Union[int, str], place: str, date: str
     for button in buttons:
         buttons_format[-1].append(button)
         i += 1
-        if i == width:
-            i = 0
+        if i % width == 0:
             buttons_format.append([])
     return InlineKeyboardMarkup(inline_keyboard=buttons_format)
 
@@ -75,3 +74,26 @@ def create_confirm_template_keyboard(user_id: tp.Union[int, str], key: str, plac
     buttons[-1].append(InlineKeyboardButton(text='Подтвердить',
                                             callback_data=f'conf{id_key}'))
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def create_places_table_keyboard(places: tp.Optional[tp.List[str]], width: int = 2) -> tp.Optional[ReplyKeyboardMarkup]:
+    if places is None:
+        return None
+    buttons = [[]]
+    i = 0
+    for place in places:
+        buttons[-1].append(KeyboardButton(text=place))
+        i += 1
+        if i % width == 0:
+            buttons.append([])
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+
+
+def create_dates_keyboard(width: int = 3) -> ReplyKeyboardMarkup:
+    current_date = datetime.now().date()
+    dates = [[]]
+    for i in range(1, 15):
+        dates[-1].append(KeyboardButton(text=(current_date + timedelta(days=i)).strftime('%d.%m.%Y')))
+        if i % width == 0:
+            dates.append([])
+    return ReplyKeyboardMarkup(keyboard=dates, resize_keyboard=True)
