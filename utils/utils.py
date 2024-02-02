@@ -214,26 +214,36 @@ async def admission_conditions(msg: tp.Union[Message, CallbackQuery], is_reg: bo
                                is_chat: bool = False,
                                is_admin: bool = False,
                                is_creator: bool = False) -> bool:
-    call: CallbackQuery
     if is_reg:
         if not base.Registration.is_registered(msg.from_user.id):
             bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
             await bot.send_message(msg.from_user.id, 'Сначала пройдите регистрацию!')
             await bot.session.close()
             return False
-    if is_chat:
+    if is_chat and isinstance(msg, Message):
         if msg.chat.type == 'private':
             await msg.reply('Эту команду нельзя использовать в личных сообщениях!')
             return False
-    if is_admin:
+    if is_chat and isinstance(msg, CallbackQuery):
+        if msg.message.chat.type == 'private':
+            await msg.reply('Эту команду нельзя использовать в личных сообщениях!')
+            return False
+    if is_admin and isinstance(msg, Message):
         bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
         if not is_chat_admin(await bot.get_chat_administrators(msg.chat.id), msg.from_user.id):
             await msg.reply('Вы не являетесь администратором!')
             await bot.session.close()
             return False
         await bot.session.close()
+    if is_admin and isinstance(msg, CallbackQuery):
+        bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+        if not is_chat_admin(await bot.get_chat_administrators(msg.message.chat.id), msg.from_user.id):
+            await msg.answer('Вы не являетесь администратором!')
+            await bot.session.close()
+            return False
+        await bot.session.close()
     if is_creator:
         if not is_bot_creator(msg.from_user.id):
-            await msg.reply('Вы не являетесь создателем бота!')
+            await msg.answer('Вы не являетесь создателем бота!')
             return False
     return True
