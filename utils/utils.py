@@ -210,7 +210,7 @@ def get_info_table(table_id: tp.Union[int, str], debug: bool = False) -> str:
     return info
 
 
-async def admission_conditions(msg: tp.Union[Message, CallbackQuery] = None, is_reg: bool = False,
+async def admission_conditions(msg: tp.Union[Message, CallbackQuery], is_reg: bool = False,
                                is_chat: bool = False,
                                is_admin: bool = False,
                                is_creator: bool = False) -> bool:

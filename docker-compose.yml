@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "qwerty"
     ports:
-      - "5432:5432"
+      - "3001:3001"
     restart: always
 
   tg_bot:
